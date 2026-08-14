@@ -1,0 +1,15 @@
+{
+  "name": "MA Gamerz Playstation",
+  "short_name": "MA Gamerz",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

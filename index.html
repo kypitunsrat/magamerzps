@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MA Gamerz Playstation</title>
+    
+    <!-- Konfigurasi PWA & Favicon -->
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1877f2">
+    <link rel="apple-touch-icon" href="logo.png">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; color: #334155; }
+        
+        /* Halaman Utama dibungkus agar padding bottom bisa dikontrol dinamis */
+        #main-app-container { display: none; padding-bottom: 80px; }
+        
+        /* HEADER MODERN BARU - ELECTRIC BLUE PS VIBE */
+        .app-header { 
+            background: linear-gradient(135deg, #1877f2 0%, #082f49 100%); /* Biru Neon Logo ke Dark Navy */
+            padding: 20px 20px 30px 20px; 
+            box-shadow: 0 10px 25px -5px rgba(24, 119, 242, 0.4); /* Bayangan neon biru */
+            margin-bottom: 25px; 
+            border-bottom: none; 
+            border-radius: 0 0 24px 24px; 
+            position: relative; 
+            overflow: hidden; 
+        }
+        
+        /* POLA WATERMARK SIMBOL PS DI HEADER */
+        .app-header::before {
+            content: '△ ◯ ✕ ◻   △ ◯ ✕ ◻   △ ◯ ✕ ◻\A ✕ ◻ △ ◯   ✕ ◻ △ ◯   ✕ ◻ △ ◯\A ◯ ✕ ◻ △   ◯ ✕ ◻ △   ◯ ✕ ◻ △\A △ ◯ ✕ ◻   △ ◯ ✕ ◻   △ ◯ ✕ ◻';
+            white-space: pre;
+            position: absolute;
+            top: -50px;
+            left: -20px;
+            font-size: 65px;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.05); /* Transparansi super tipis (5%) */
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 0;
+            letter-spacing: 25px;
+            transform: rotate(-8deg); /* Dimiringkan sedikit agar lebih dinamis */
+        }
+        
+        /* Efek kilauan halus di background header */
+        .app-header::after { 
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; 
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 50%); 
+            pointer-events: none; z-index: 0; 
+        }
+        
+        .header-content { position: relative; z-index: 1; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; }
+        
+        .app-header-brand { display: flex; align-items: center; gap: 12px; text-align: left; }
+        .app-header-brand img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.9); box-shadow: 0 4px 12px rgba(0,0,0,0.3); background: #fff; }
+        .app-header h2 { margin: 0 0 6px 0; font-size: 20px; color: #ffffff; font-weight: 800; letter-spacing: 0.2px; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        
+        /* Badge jam dengan efek Glassmorphism */
+        .waktu-badge { background: rgba(255, 255, 255, 0.15); padding: 5px 12px; border-radius: 20px; display: inline-block; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .waktu-badge span { color: #f8fafc; font-size: 11px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        
+        /* MINI STATS DI HEADER */
+        .header-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
+        .h-stat { background: #ffffff; border: none; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .h-stat.merah { color: #dc2626; }
+        .h-stat.hijau { color: #16a34a; }
+        .h-stat.biru { color: #0284c7; }
+
+        .page { display: none; padding: 0 15px; }
+        .page.active { display: block; }
+        .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        
+        .tv-box { position: relative; overflow: hidden; padding: 20px 15px; border-radius: 16px; text-align: center; font-weight: 600; cursor: pointer; transition: transform 0.1s; display: flex; flex-direction: column; justify-content: center; min-height: 120px; border: 1px solid rgba(0,0,0,0.05); }
+        .tv-box:active { transform: scale(0.98); }
+        
+        /* EFEK SIMBOL PS PUDAR DI KOTAK TV (Tetap dipertahankan) */
+        .tv-box::before { content: '△ ◯ \A ✕ ◻'; white-space: pre; position: absolute; right: 5px; bottom: -5px; font-size: 45px; line-height: 0.9; color: rgba(255, 255, 255, 0.08); font-family: Arial, sans-serif; font-weight: bold; pointer-events: none; text-align: right; letter-spacing: -2px; z-index: 0; }
+        .tv-box h3, .tv-box .jam-main, .tv-box .countdown, .tv-box .rincian { position: relative; z-index: 1; }
+
+        .bg-green { background: linear-gradient(145deg, #22c55e, #16a34a); color: white; box-shadow: 0 10px 15px -3px rgba(34, 197, 94, 0.3); }
+        .bg-red { background: linear-gradient(145deg, #ef4444, #dc2626); color: white; box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.3); }
+        
+        .tv-box h3 { margin: 0 0 5px 0; font-size: 20px; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .tv-box .jam-main { font-size: 12px; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 20px; display: inline-block; margin: 5px auto; }
+        .tv-box .countdown { font-size: 24px; font-weight: 700; margin: 5px 0; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tv-box .rincian { font-size: 11px; opacity: 0.9; margin-top: auto; display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 8px; }
+
+        .filter-btn-group { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 15px; scrollbar-width: none; }
+        .filter-btn-group::-webkit-scrollbar { display: none; }
+        .filter-btn { flex: 0 0 auto; padding: 10px 15px; border-radius: 20px; border: 1px solid #cbd5e1; background: white; color: #64748b; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .filter-btn.active { background: #1877f2; color: white; border-color: #1877f2; box-shadow: 0 4px 10px rgba(24, 119, 242, 0.3); }
+
+        .card-laporan { background: white; padding: 25px 20px; border-radius: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .card-laporan h3 { margin: 0 0 5px 0; color: #475569; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-laporan .total-utama { margin: 0; font-size: 36px; font-weight: 700; color: #0f172a; }
+        
+        .split-laporan { display: flex; justify-content: space-between; margin-top: 20px; background: #f8fafc; padding: 15px; border-radius: 12px; }
+        .split-item { text-align: center; flex: 1; }
+        .split-item span { display: block; font-size: 12px; color: #64748b; font-weight: 600; margin-bottom: 4px; }
+        .split-item strong { font-size: 18px; color: #334155; }
+
+        .kalender-container { display: none; background: white; padding: 20px; border-radius: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .kalender-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .kalender-nav button { background: #e7f3ff; border: 1px solid #cfe2ff; padding: 6px 12px; border-radius: 8px; font-weight: 700; cursor: pointer; color: #0866ff; }
+        .kalender-nav button:hover { background: #cfe2ff; }
+        .kalender-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
+        .kalender-header-hari { font-size: 12px; font-weight: 700; color: #94a3b8; padding-bottom: 8px; }
+        .kalender-sel { aspect-ratio: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; padding: 4px; }
+        .kalender-sel:hover { border-color: #1877f2; background: #e7f3ff; }
+        .kalender-sel.aktif { background: #1877f2; color: white; border-color: #1877f2; }
+        .kalender-sel.kosong { background: transparent; border: none; cursor: default; }
+        .kalender-tgl { font-size: 14px; font-weight: 700; }
+        .kalender-nominal { font-size: 9px; margin-top: 2px; color: #16a34a; font-weight: 600; }
+        .kalender-sel.aktif .kalender-nominal { color: #e7f3ff; }
+        .kalender-sel.ada-transaksi { background: #f0fdf4; border-color: #bbf7d0; }
+
+        .list-riwayat { margin-top: 15px; max-height: 400px; overflow-y: auto; }
+        .item-riwayat { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 10px; font-size: 13px; }
+        .item-riwayat .header-riwayat { display: flex; justify-content: space-between; font-weight: 700; color: #0f172a; margin-bottom: 6px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px; }
+        .item-riwayat .jam-riwayat { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 6px; }
+        .item-riwayat .detail-uang { display: flex; justify-content: space-between; color: #475569; margin-bottom: 4px; }
+        .item-riwayat .detail-makanan { color: #d97706; font-style: italic; font-size: 12px; margin-top: 4px; }
+        
+        .action-riwayat { text-align: right; margin-top: 8px; border-top: 1px dashed #e2e8f0; padding-top: 8px; }
+        .btn-hapus-riwayat { background: none; border: none; color: #ef4444; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 4px; transition: 0.2s; }
+        .btn-hapus-riwayat:hover { background: #fee2e2; }
+
+        .setting-card { background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        .setting-card h4 { margin: 0 0 10px 0; color: #0f172a; font-size: 16px; }
+        .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; gap: 10px; }
+        .setting-item:last-child { border-bottom: none; }
+        
+        .setting-aksi { display: flex; gap: 8px; }
+        .btn-edit { background: #e0f2fe; color: #0284c7; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 12px; }
+        .btn-hapus { background: #fee2e2; color: #dc2626; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 12px; }
+
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 12px 0; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); z-index: 50; border-top: 1px solid #f1f5f9; }
+        .nav-item { flex: 1; text-align: center; font-size: 11px; font-weight: 700; color: #94a3b8; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+        .nav-item.active { color: #1877f2; }
+        .nav-icon { font-size: 20px; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); justify-content: center; align-items: flex-end; z-index: 100; }
+        .modal-content { background: white; width: 100%; max-width: 500px; padding: 25px 20px; border-radius: 24px 24px 0 0; box-sizing: border-box; max-height: 90vh; overflow-y: auto; }
+        
+        .modal-content select optgroup { font-weight: bold; color: #0f172a; font-style: normal; }
+        .modal-content select option { font-weight: normal; color: #334155; padding: 5px; }
+
+        .modal-content select, .modal-content input { width: 100%; padding: 14px; margin: 5px 0 15px 0; border-radius: 12px; border: 1px solid #cbd5e1; font-size: 15px; font-weight: 600; background: #f8fafc; outline: none; box-sizing: border-box; }
+        .label-input { font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 2px; display: block; }
+        
+        .btn-group { display: flex; gap: 12px; margin-top: 15px; }
+        .btn { flex: 1; padding: 14px; border: none; border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; color: white; }
+        .btn-mulai { background: #1877f2; }
+        .btn-batal { background: #e2e8f0; color: #475569; }
+        .btn-selesai { background: #ef4444; }
+        .btn-makanan { background: #f59e0b; width: 100%; margin-bottom: 20px; }
+        .btn-tambah-waktu { background: #10b981; width: 100%; margin-bottom: 20px; }
+        
+        hr.pemisah { border: 0; border-top: 1px dashed #cbd5e1; margin: 15px 0; }
+
+        #page-login { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f0f2f5; z-index: 9999; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        #page-login.active { display: flex; }
+        .login-box { background: white; padding: 35px 25px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 400px; text-align: center; }
+        .login-box img { width: 80px; height: 80px; border-radius: 50%; margin-bottom: 15px; border: 3px solid #1877f2; }
+        .login-box h2 { margin: 0 0 20px 0; color: #0f172a; }
+        .login-input { width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 12px; border: 1px solid #cbd5e1; box-sizing: border-box; font-size: 15px; }
+
+        /* ========================================================
+           RESPONSIVE MOBILE UI (MEDIA QUERIES)
+           ======================================================== */
+        @media (max-width: 600px) {
+            .app-header { padding: 25px 15px 30px 15px; border-radius: 0 0 30px 30px; }
+            .header-content { flex-direction: column; justify-content: center; gap: 15px; text-align: center; }
+            .app-header-brand { flex-direction: column; text-align: center; }
+            .header-stats { justify-content: center; width: 100%; }
+            
+            .grid-container { gap: 10px; }
+            .tv-box { padding: 15px 10px; min-height: 110px; }
+            .tv-box h3 { font-size: 18px; }
+            .tv-box .countdown { font-size: 20px; }
+            .tv-box .rincian { flex-direction: column; align-items: center; gap: 5px; font-size: 10px; }
+            
+            .split-laporan { flex-direction: column; gap: 10px; }
+            .kalender-nav { flex-direction: column; gap: 10px; }
+            .item-riwayat .detail-uang { flex-direction: column; gap: 4px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HALAMAN LOGIN -->
+    <div id="page-login">
+        <div class="login-box">
+            <img src="logo.png" alt="Logo MA Gamerz">
+            <h2>Login Owner</h2>
+            <input type="email" id="login-email" class="login-input" placeholder="Masukkan Email Anda">
+            <input type="password" id="login-password" class="login-input" placeholder="Password">
+            <button class="btn btn-mulai" onclick="window.prosesLogin()">Masuk</button>
+        </div>
+    </div>
+
+    <!-- WRAPPER APLIKASI UTAMA -->
+    <div id="main-app-container">
+        
+        <!-- HEADER DENGAN WATERMARK PS & GAMER GRADIENT -->
+        <div class="app-header">
+            <div class="header-content">
+                <div class="app-header-brand">
+                    <img src="logo.png" alt="Logo MA Gamerz">
+                    <div>
+                        <h2>MA Gamerz Playstation</h2>
+                        <div class="waktu-badge">
+                            <span>📅 <strong id="header-waktu">Memuat waktu...</strong></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- STATISTIK KOTAK KECIL MELAYANG -->
+                <div class="header-stats" id="header-stats-container">
+                    <!-- Akan diisi otomatis oleh JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- HALAMAN DASHBOARD UTAMA -->
+        <div id="page-dashboard" class="page active">
+            <div id="app">Memuat data TV...</div>
+        </div>
+
+        <!-- HALAMAN LAPORAN -->
+        <div id="page-laporan" class="page">
+            <div class="filter-btn-group">
+                <button class="filter-btn active" onclick="window.ubahFilterLaporan('harian', this)">Hari Ini</button>
+                <button class="filter-btn" onclick="window.ubahFilterLaporan('kemarin', this)">Kemarin</button>
+                <button class="filter-btn" onclick="window.ubahFilterLaporan('kemarin_dulu', this)">Kemarin Dulu</button>
+                <button class="filter-btn" onclick="window.ubahFilterLaporan('mingguan', this)">Minggu Ini</button>
+                <button class="filter-btn" onclick="window.ubahFilterLaporan('bulanan', this)">Bulan Ini</button>
+                <button class="filter-btn" onclick="window.ubahFilterLaporan('semua', this)">Semua Waktu (Kalender)</button>
+            </div>
+
+            <div class="card-laporan">
+                <h3 id="label-laporan">Total Pendapatan Hari Ini</h3>
+                <p class="total-utama" id="lap-total">Rp 0</p>
+                <div class="split-laporan">
+                    <div class="split-item">
+                        <span>🎮 Sewa Rental</span>
+                        <strong id="lap-rental">Rp 0</strong>
+                    </div>
+                    <div style="width: 1px; background: #e2e8f0;"></div>
+                    <div class="split-item">
+                        <span>🍜 Makanan</span>
+                        <strong id="lap-makanan">Rp 0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div id="box-kalender" class="kalender-container">
+                <div class="kalender-nav">
+                    <button onclick="window.geserBulan(-1)">&#9664; Bulan Lalu</button>
+                    <span id="label-bulan-tahun" style="font-weight: 700; font-size: 15px; color: #0f172a;">Agustus 2026</span>
+                    <button onclick="window.geserBulan(1)">Bulan Depan &#9654;</button>
+                </div>
+                <div class="kalender-grid" style="margin-top: 15px;">
+                    <div class="kalender-header-hari">Min</div>
+                    <div class="kalender-header-hari">Sen</div>
+                    <div class="kalender-header-hari">Sel</div>
+                    <div class="kalender-header-hari">Rab</div>
+                    <div class="kalender-header-hari">Kam</div>
+                    <div class="kalender-header-hari">Jum</div>
+                    <div class="kalender-header-hari">Sab</div>
+                </div>
+                <div id="grid-tanggal-kalender" class="kalender-grid" style="margin-top: 6px;"></div>
+            </div>
+
+            <div class="card-laporan">
+                <h3 id="judul-riwayat">Daftar Riwayat Transaksi</h3>
+                <div id="list-riwayat" class="list-riwayat">
+                    <p style="color:#94a3b8; font-size:13px; text-align:center;">Memuat riwayat...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- HALAMAN PENGATURAN / KUSTOMISASI -->
+        <div id="page-pengaturan" class="page">
+            <div class="setting-card">
+                <h4>⚡ Pengaturan Paket Rental</h4>
+                <div id="list-pengaturan-paket">Memuat paket...</div>
+                <button class="btn" style="background:#1877f2; margin-top:10px;" id="btn-tambah-paket-baru">+ Tambah Paket Baru</button>
+            </div>
+
+            <div class="setting-card">
+                <h4>🍜 Pengaturan Menu Makanan</h4>
+                <div id="list-pengaturan-makanan">Memuat menu...</div>
+                <button class="btn" style="background:#1877f2; margin-top:10px;" id="btn-tambah-makanan-baru">+ Tambah Menu Baru</button>
+            </div>
+
+            <!-- TOMBOL UBAH PASSWORD & LOGOUT -->
+            <div class="setting-card" style="border-color: #cbd5e1; background: #f8fafc;">
+                <h4 style="color: #334155;">🔒 Keamanan Akun</h4>
+                <button class="btn" style="background: #3b82f6; margin-bottom: 10px;" onclick="window.bukaModalUbahPassword()">Ubah Password</button>
+                <button class="btn btn-selesai" style="margin-top: 0; background: #ef4444;" onclick="window.prosesLogout()">Keluar Aplikasi (Logout)</button>
+            </div>
+        </div>
+
+        <!-- NAVIGASI BAWAH -->
+        <div class="bottom-nav">
+            <div class="nav-item active" id="nav-dashboard" onclick="window.pindahTab('dashboard')"><span class="nav-icon">🎮</span> Dashboard</div>
+            <div class="nav-item" id="nav-laporan" onclick="window.pindahTab('laporan')"><span class="nav-icon">📊</span> Laporan</div>
+            <div class="nav-item" id="nav-pengaturan" onclick="window.pindahTab('pengaturan')"><span class="nav-icon">⚙️</span> Pengaturan</div>
+        </div>
+    </div> <!-- End Main App Container -->
+
+    <!-- MODAL MULAI -->
+    <div id="modal-rental" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 15px 0;">Mulai Sesi TV <span id="modal-tv-id"></span></h3>
+            <span class="label-input">Jam Mulai (WITA):</span>
+            <input type="time" id="input-jam-mulai">
+            <span class="label-input">Pilih Paket Awal:</span>
+            <select id="pilihan-paket"></select>
+            <div class="btn-group">
+                <button class="btn btn-batal" onclick="window.tutupModal()">Batal</button>
+                <button class="btn btn-mulai" onclick="window.prosesRental()">Mulai Sesi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL KELOLA -->
+    <div id="modal-aktif" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 5px 0;">Kelola TV <span id="aktif-tv-id"></span></h3>
+            <p id="info-status-main" style="margin: 0 0 15px 0; color: #64748b; font-size: 14px; font-weight: 600;"></p>
+            
+            <div id="box-history-aktif" style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 12px; margin-bottom: 15px; font-size: 13px; color: #334155;">
+                <div style="margin-bottom: 10px;">
+                    <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px;">📦 Riwayat Paket:</div>
+                    <ul id="list-history-paket" style="margin: 0; padding-left: 18px; color: #475569;"><li>-</li></ul>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px;">🍜 Riwayat Makanan:</div>
+                    <ul id="list-history-makanan" style="margin: 0; padding-left: 18px; color: #475569;"><li>Belum ada pesanan</li></ul>
+                </div>
+                <div style="margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 8px; font-weight: 700; color: #1877f2; display: flex; justify-content: space-between;">
+                    <span>Total Tagihan Sementara:</span>
+                    <span id="teks-total-aktif">Rp 0</span>
+                </div>
+            </div>
+
+            <span class="label-input">Perpanjang / Tambah Billing:</span>
+            <select id="pilihan-tambah-waktu"></select>
+            <button class="btn btn-tambah-waktu" onclick="window.tambahWaktu()">+ Tambah Waktu Main</button>
+            
+            <hr class="pemisah">
+
+            <span class="label-input">Beli Makanan / Minuman:</span>
+            <select id="pilihan-makanan"></select>
+            <button class="btn btn-makanan" onclick="window.tambahMakanan()">+ Catat Pembelian Makanan</button>
+            
+            <div class="btn-group">
+                <button class="btn btn-batal" onclick="window.tutupModalAktif()">Tutup</button>
+                <button class="btn btn-selesai" onclick="window.selesaiRental()">Akhiri Sesi Cepat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL UBAH PASSWORD -->
+    <div id="modal-ubah-password" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 15px 0;">Ubah Password</h3>
+            <p style="font-size: 12px; color: #64748b; margin-bottom: 15px;">Masukkan password baru Anda di bawah ini. Pastikan mudah diingat oleh Owner.</p>
+            
+            <span class="label-input">Password Baru:</span>
+            <input type="password" id="input-pass-baru" placeholder="Minimal 6 karakter">
+            
+            <span class="label-input">Ulangi Password Baru:</span>
+            <input type="password" id="input-pass-konfirm" placeholder="Ketik ulang password baru">
+            
+            <div class="btn-group">
+                <button class="btn btn-batal" onclick="window.tutupModalUbahPassword()">Batal</button>
+                <button class="btn btn-mulai" onclick="window.simpanPasswordBaru()">Simpan Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TAMBAH/EDIT PAKET -->
+    <div id="modal-tambah-paket" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="judul-modal-paket">Tambah Paket Rental</h3>
+            <input type="hidden" id="edit-paket-id">
+            <span class="label-input">Nama Paket:</span>
+            <input type="text" id="add-paket-nama" placeholder="Contoh: 1 Jam">
+            <span class="label-input">Durasi (Menit):</span>
+            <input type="number" id="add-paket-durasi" placeholder="Contoh: 60">
+            <span class="label-input">Harga (Rp):</span>
+            <input type="number" id="add-paket-harga" placeholder="Contoh: 10000">
+            <div class="btn-group">
+                <button class="btn btn-batal" id="btn-batal-paket" type="button">Batal</button>
+                <button class="btn btn-mulai" id="btn-simpan-paket" type="button">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TAMBAH/EDIT MAKANAN -->
+    <div id="modal-tambah-makanan" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="judul-modal-makanan">Tambah Menu Makanan</h3>
+            <input type="hidden" id="edit-makanan-id">
+            <span class="label-input">Nama Makanan / Minuman:</span>
+            <input type="text" id="add-makanan-nama" placeholder="Contoh: Indomie Double">
+            <span class="label-input">Harga (Rp):</span>
+            <input type="number" id="add-makanan-harga" placeholder="Contoh: 12000">
+            <div class="btn-group">
+                <button class="btn btn-batal" id="btn-batal-makanan" type="button">Batal</button>
+                <button class="btn btn-mulai" id="btn-simpan-makanan" type="button">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+        const supabaseUrl = 'https://naspibprbcyocgodhfhi.supabase.co';
+        const supabaseKey = 'sb_publishable_9LLVWyRnLRKXU2ysA5R_gA_4MJPx7IK';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        let daftarPaket = [], daftarMakanan = [], dataTVGlobal = [], dataTransaksi = [];
+        let tvTerpilih = null;
+        let filterAktif = 'harian';
+        let tanggalTerpilihKalender = null; 
+        
+        let kalenderTahunAktif = new Date().getFullYear();
+        let kalenderBulanAktif = new Date().getMonth();
+        let tvSedangDiprosesOtomatis = {}; 
+        let intervalTimerApp = null; 
+
+        // ==========================================
+        // SISTEM ANTI-CHEAT (SINKRONISASI WAKTU SERVER)
+        // ==========================================
+        let offsetWaktuServer = 0; 
+
+        async function sinkronisasiWaktuServer() {
+            try {
+                const response = await fetch('http://worldtimeapi.org/api/timezone/Asia/Makassar');
+                const data = await response.json();
+                const waktuServer = new Date(data.datetime).getTime();
+                const waktuLokal = new Date().getTime();
+                offsetWaktuServer = waktuServer - waktuLokal;
+                console.log("Anti-Cheat Aktif. Offset terkalibrasi:", offsetWaktuServer);
+            } catch (err) {
+                console.warn("Gagal sinkronisasi API waktu. Menggunakan waktu lokal aman.", err);
+                offsetWaktuServer = 0;
+            }
+        }
+
+        function getWaktuAsli() {
+            return new Date(new Date().getTime() + offsetWaktuServer);
+        }
+
+        // ==========================================
+        // SISTEM AUTENTIKASI (LOGIN / LOGOUT / UBAH PASS)
+        // ==========================================
+
+        window.prosesLogin = async function() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            if(!email || !password) return alert("Harap isi Email dan Password!");
+
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                alert("Login Gagal: " + error.message);
+            }
+        };
+
+        window.prosesLogout = async function() {
+            if(!confirm("Anda yakin ingin keluar dari aplikasi?")) return;
+            await supabase.auth.signOut();
+        };
+
+        window.bukaModalUbahPassword = function() {
+            document.getElementById('input-pass-baru').value = '';
+            document.getElementById('input-pass-konfirm').value = '';
+            document.getElementById('modal-ubah-password').style.display = 'flex';
+        };
+        
+        window.tutupModalUbahPassword = function() {
+            document.getElementById('modal-ubah-password').style.display = 'none';
+        };
+
+        window.simpanPasswordBaru = async function() {
+            const baru = document.getElementById('input-pass-baru').value;
+            const konfirm = document.getElementById('input-pass-konfirm').value;
+
+            if(!baru || !konfirm) return alert("Semua kolom harus diisi!");
+            if(baru !== konfirm) return alert("Password baru dan konfirmasi tidak cocok!");
+            if(baru.length < 6) return alert("Password minimal 6 karakter!");
+
+            const { data, error } = await supabase.auth.updateUser({ password: baru });
+            if (error) {
+                alert("Gagal merubah password: " + error.message);
+            } else {
+                alert("Password berhasil diubah secara permanen!");
+                window.tutupModalUbahPassword();
+            }
+        };
+
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                document.getElementById('page-login').classList.remove('active');
+                document.getElementById('main-app-container').style.display = 'block';
+                window.pindahTab('dashboard');
+                mulaiAplikasiUtama();
+            } else {
+                hentikanAplikasiUtama();
+                document.getElementById('main-app-container').style.display = 'none';
+                document.getElementById('page-login').classList.add('active');
+            }
+        });
+
+        // ==========================================
+        // INTI APLIKASI KASIR
+        // ==========================================
+
+        async function mulaiAplikasiUtama() {
+            await sinkronisasiWaktuServer(); 
+            updateWaktuHeader();
+            if(!intervalTimerApp) intervalTimerApp = setInterval(rutinitasSistem, 1000);
+            jalankanAplikasi(); 
+        }
+
+        function hentikanAplikasiUtama() {
+            if(intervalTimerApp) {
+                clearInterval(intervalTimerApp);
+                intervalTimerApp = null;
+            }
+        }
+
+        function updateWaktuHeader() {
+            const opsi = { timeZone: 'Asia/Makassar', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            const el = document.getElementById('header-waktu');
+            if(el) el.innerText = getWaktuAsli().toLocaleDateString('id-ID', opsi) + ' WITA';
+        }
+
+        function rutinitasSistem() {
+            updateWaktuHeader(); 
+            
+            if (dataTVGlobal.length > 0) {
+                let adaYangHabis = false;
+                dataTVGlobal.forEach(tv => {
+                    if (tv.is_active && tv.end_time && new Date(tv.end_time) <= getWaktuAsli()) {
+                        adaYangHabis = true;
+                        prosesCheckout(tv);
+                    }
+                });
+                if(!adaYangHabis) renderTampilan(dataTVGlobal); 
+            } 
+        }
+
+        function formatJam(isoString) {
+            if(!isoString) return "";
+            return new Date(isoString).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar' });
+        }
+
+        window.pindahTab = function(tabName) {
+            document.querySelectorAll('.page, .nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('page-' + tabName).classList.add('active');
+            document.getElementById('nav-' + tabName).classList.add('active');
+            if (tabName === 'laporan') muatDataLaporan();
+            if (tabName === 'pengaturan') muatDataPengaturan();
+        };
+
+        async function jalankanAplikasi() {
+            try {
+                const { data: paket } = await supabase.from('packages').select('*').order('price', { ascending: true });
+                if (paket) daftarPaket = paket;
+
+                const { data: makanan } = await supabase.from('foods').select('*').order('price', { ascending: true });
+                if (makanan) daftarMakanan = makanan;
+
+                const { data: tvs } = await supabase.from('tvs').select('*').order('id', { ascending: true });
+                if (tvs) dataTVGlobal = tvs;
+
+                renderTampilan(tvs);
+            } catch (err) { console.error(err); }
+        }
+
+        function renderTampilan(tvData) {
+            if(!document.getElementById('app')) return;
+
+            let aktifCount = 0;
+            let tersediaCount = 0;
+            tvData.forEach(tv => {
+                if(tv.is_active) aktifCount++;
+                else tersediaCount++;
+            });
+
+            document.getElementById('header-stats-container').innerHTML = `
+                <div class="h-stat merah"><span style="font-size:14px;">🎮</span> ${aktifCount} Main</div>
+                <div class="h-stat hijau"><span style="font-size:14px;">✅</span> ${tersediaCount} Kosong</div>
+                <div class="h-stat biru"><span style="font-size:14px;">📺</span> ${tvData.length} Total</div>
+            `;
+
+            let html = '<div class="grid-container">';
+            
+            tvData.forEach(tv => {
+                if (!tv.is_active) {
+                    html += `<div class="tv-box bg-green" onclick="window.klikTV(${tv.id})"><h3>TV ${tv.id}</h3><p style="margin:0; opacity: 0.9;">Tersedia</p></div>`;
+                } else {
+                    let sisa = hitungSisaWaktu(tv.end_time);
+                    let jamRange = `${formatJam(tv.start_time)} - ${formatJam(tv.end_time)}`;
+                    html += `
+                        <div class="tv-box bg-red" onclick="window.klikTVAktif(${tv.id})">
+                            <h3>TV ${tv.id}</h3>
+                            <span class="jam-main">⏰ ${jamRange}</span>
+                            <div class="countdown">${sisa}</div>
+                            <div class="rincian">
+                                <span>Rental: Rp ${Number(tv.rental_price).toLocaleString('id-ID')}</span>
+                                <span>Makanan: Rp ${Number(tv.food_price || 0).toLocaleString('id-ID')}</span>
+                            </div>
+                        </div>`;
+                }
+            });
+            html += '</div>';
+            document.getElementById('app').innerHTML = html;
+        }
+
+        function hitungSisaWaktu(endTime) {
+            if (!endTime) return "";
+            const ms = new Date(endTime) - getWaktuAsli();
+            if (ms <= 0) return "Selesai..."; 
+            const d = Math.floor(ms / 1000);
+            const j = Math.floor(d / 3600);
+            const m = Math.floor((d % 3600) / 60);
+            const s = d % 60;
+            return j > 0 ? `${j}j ${m}m` : `${m}m ${s}s`;
+        }
+
+        window.klikTV = function(id) {
+            tvTerpilih = id; document.getElementById('modal-tv-id').innerText = id;
+            
+            const formatter = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit', hour12: false
+            });
+            const jamWITA = formatter.format(getWaktuAsli()); 
+
+            document.getElementById('input-jam-mulai').value = jamWITA;
+
+            document.getElementById('pilihan-paket').innerHTML = '<option value="">-- Pilih Paket Rental --</option>' + 
+                daftarPaket.map(p => `<option value="${p.id}" data-durasi="${p.duration_minutes}" data-harga="${p.price}" data-nama="${p.name}">${p.name} (Rp ${p.price.toLocaleString('id-ID')})</option>`).join('');
+            document.getElementById('modal-rental').style.display = 'flex';
+        };
+
+        window.klikTVAktif = function(id) {
+            tvTerpilih = id; const tv = dataTVGlobal.find(t => t.id === id);
+            document.getElementById('aktif-tv-id').innerText = id;
+            document.getElementById('info-status-main').innerHTML = `Status: <b>Sedang Berjalan</b>`;
+            
+            const paketList = tv.current_package_name ? tv.current_package_name.split('+').map(p => `<li>${p.trim()}</li>`).join('') : '<li>-</li>';
+            document.getElementById('list-history-paket').innerHTML = paketList;
+
+            const makananList = tv.food_details && tv.food_details.trim() !== "" ? tv.food_details.split('<br>').map(m => `<li>${m.replace('• ', '')}</li>`).join('') : '<li>Belum ada pesanan</li>';
+            document.getElementById('list-history-makanan').innerHTML = makananList;
+
+            const totalAktif = (tv.rental_price || 0) + (tv.food_price || 0);
+            document.getElementById('teks-total-aktif').innerText = `Rp ${totalAktif.toLocaleString('id-ID')}`;
+
+            let htmlPilihanMakanan = '<option value="">-- Pilih Menu Makanan --</option>';
+            let grupMinuman = [], grupGoreng = [], grupSoto = [], grupLainnya = [];
+
+            daftarMakanan.forEach(m => {
+                let namaLowerCase = m.name.toLowerCase();
+                let optionStr = `<option value="${m.price}" data-nama="${m.name}">${m.name} (Rp ${m.price.toLocaleString('id-ID')})</option>`;
+
+                if (namaLowerCase.includes('indomie goreng') || namaLowerCase.includes('mie goreng')) {
+                    grupGoreng.push(optionStr);
+                } else if (namaLowerCase.includes('indomie soto') || namaLowerCase.includes('mie soto')) {
+                    grupSoto.push(optionStr);
+                } else if (namaLowerCase.includes('air') || namaLowerCase.includes('teh') || namaLowerCase.includes('floridina') || namaLowerCase.includes('kopi') || namaLowerCase.includes('es') || namaLowerCase.includes('minum')) {
+                    grupMinuman.push(optionStr);
+                } else {
+                    grupLainnya.push(optionStr);
+                }
+            });
+
+            if (grupMinuman.length > 0) htmlPilihanMakanan += `<optgroup label="🥤 Kelompok Minuman">${grupMinuman.join('')}</optgroup>`;
+            if (grupGoreng.length > 0) htmlPilihanMakanan += `<optgroup label="🍝 Kelompok Indomie Goreng">${grupGoreng.join('')}</optgroup>`;
+            if (grupSoto.length > 0) htmlPilihanMakanan += `<optgroup label="🍜 Kelompok Indomie Soto">${grupSoto.join('')}</optgroup>`;
+            if (grupLainnya.length > 0) htmlPilihanMakanan += `<optgroup label="🍔 Kelompok Lainnya">${grupLainnya.join('')}</optgroup>`;
+
+            document.getElementById('pilihan-makanan').innerHTML = htmlPilihanMakanan;
+            
+            let opsiTambahWaktuHTML = '<option value="">-- Pilih Durasi Tambahan --</option>';
+            daftarPaket.forEach(p => {
+                opsiTambahWaktuHTML += `<option value="${p.id}" data-durasi="${p.duration_minutes}" data-harga="${p.price}" data-nama="${p.name} (Rp ${p.price.toLocaleString('id-ID')})">${p.name} - Rp ${p.price.toLocaleString('id-ID')}</option>`;
+            });
+            opsiTambahWaktuHTML += `<option value="PROMO_1JAM_3JAM" data-durasi="120" data-harga="10000" data-nama="Tambah 1 Jam (Jadi Paket 3 Jam) (Rp 10.000)">🔥 Tambah 1 Jam (Jadi Paket 3 Jam) - Rp 10.000</option>`;
+            opsiTambahWaktuHTML += `<option value="PROMO_30MNT_3JAM" data-durasi="90" data-harga="5000" data-nama="Tambah 30 Menit (Jadi Paket 3 Jam) (Rp 5.000)">🔥 Tambah 30 Menit (Jadi Paket 3 Jam) - Rp 5.000</option>`;
+            opsiTambahWaktuHTML += `<option value="KLAIM_BONUS_1JAM" data-durasi="60" data-harga="0" data-nama="🎁 Klaim Bonus 1 Jam (Rp 0)">🎁 Klaim Bonus 1 Jam - Rp 0</option>`;
+
+            document.getElementById('pilihan-tambah-waktu').innerHTML = opsiTambahWaktuHTML;
+            document.getElementById('modal-aktif').style.display = 'flex';
+        };
+
+        window.tutupModal = () => document.getElementById('modal-rental').style.display = 'none';
+        window.tutupModalAktif = () => document.getElementById('modal-aktif').style.display = 'none';
+
+        window.prosesRental = async function() {
+            const sel = document.getElementById('pilihan-paket'); const opt = sel.options[sel.selectedIndex];
+            const jamInput = document.getElementById('input-jam-mulai').value;
+            if (!opt.value) return alert("Pilih paket dulu!");
+
+            const [jam, menit] = jamInput.split(':');
+            const mulai = getWaktuAsli(); 
+            mulai.setHours(jam, menit, 0, 0); 
+
+            const durasiMs = parseInt(opt.getAttribute('data-durasi')) * 60000;
+            const selesai = new Date(mulai.getTime() + durasiMs); 
+
+            let namaPaketFormatted = `${opt.getAttribute('data-nama')} (Rp ${parseInt(opt.getAttribute('data-harga')).toLocaleString('id-ID')})`;
+
+            await supabase.from('tvs').update({ 
+                is_active: true, start_time: mulai.toISOString(), end_time: selesai.toISOString(), 
+                current_package_name: namaPaketFormatted, rental_price: parseInt(opt.getAttribute('data-harga')), 
+                food_price: 0, food_details: '' 
+            }).eq('id', tvTerpilih);
+            
+            window.tutupModal(); jalankanAplikasi();
+        };
+
+        window.tambahWaktu = async function() {
+            const sel = document.getElementById('pilihan-tambah-waktu');
+            const opt = sel.options[sel.selectedIndex];
+            if (!opt.value) return alert("Pilih paket tambahan dulu!");
+
+            const durasiTambahMenit = parseInt(opt.getAttribute('data-durasi')); 
+            const hargaTambah = parseInt(opt.getAttribute('data-harga')); 
+            const namaPaketTambah = opt.getAttribute('data-nama');
+            
+            const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
+            const hargaRentalBaru = (tv.rental_price || 0) + hargaTambah;
+            const namaPaketBaru = tv.current_package_name + " + " + namaPaketTambah;
+
+            let waktuSelesaiLama = new Date(tv.end_time);
+            let waktuSekarang = getWaktuAsli(); 
+            let waktuSelesaiBaru;
+
+            if (waktuSelesaiLama > waktuSekarang) {
+                waktuSelesaiBaru = new Date(waktuSelesaiLama.getTime() + durasiTambahMenit * 60000);
+            } else {
+                waktuSelesaiBaru = new Date(waktuSekarang.getTime() + durasiTambahMenit * 60000);
+            }
+
+            await supabase.from('tvs').update({ 
+                end_time: waktuSelesaiBaru.toISOString(), 
+                current_package_name: namaPaketBaru, 
+                rental_price: hargaRentalBaru 
+            }).eq('id', tvTerpilih);
+            
+            tv.end_time = waktuSelesaiBaru.toISOString();
+            tv.current_package_name = namaPaketBaru;
+            tv.rental_price = hargaRentalBaru;
+
+            const paketList = namaPaketBaru.split('+').map(p => `<li>${p.trim()}</li>`).join('');
+            document.getElementById('list-history-paket').innerHTML = paketList;
+            document.getElementById('teks-total-aktif').innerText = `Rp ${(hargaRentalBaru + (tv.food_price || 0)).toLocaleString('id-ID')}`;
+
+            sel.selectedIndex = 0; 
+            jalankanAplikasi();
+        };
+
+        window.tambahMakanan = async function() {
+            const sel = document.getElementById('pilihan-makanan');
+            const opt = sel.options[sel.selectedIndex];
+            const hrg = parseInt(opt.value);
+            if (!hrg) return alert("Pilih makanan!");
+            
+            const namaMakanan = opt.getAttribute('data-nama');
+            const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
+            const hargaBaru = (tv.food_price || 0) + hrg;
+            
+            let formatItemBaru = `${namaMakanan} (Rp ${hrg.toLocaleString('id-ID')})`;
+            let detailBaru = (tv.food_details && tv.food_details.trim() !== "") ? tv.food_details + "<br>• " + formatItemBaru : "• " + formatItemBaru;
+
+            await supabase.from('tvs').update({ food_price: hargaBaru, food_details: detailBaru }).eq('id', tvTerpilih);
+            
+            tv.food_price = hargaBaru;
+            tv.food_details = detailBaru;
+
+            const makananList = detailBaru.split('<br>').map(m => `<li>${m.replace('• ', '')}</li>`).join('');
+            document.getElementById('list-history-makanan').innerHTML = makananList;
+            document.getElementById('teks-total-aktif').innerText = `Rp ${(tv.rental_price + hargaBaru).toLocaleString('id-ID')}`;
+
+            sel.selectedIndex = 0; 
+            jalankanAplikasi();
+        };
+
+        window.selesaiRental = async function() {
+            const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
+            if (!confirm(`Selesaikan sesi TV ${tv.id} lebih cepat dari waktu?`)) return;
+            prosesCheckout(tv);
+            window.tutupModalAktif();
+        };
+
+        async function prosesCheckout(tv) {
+            if (tvSedangDiprosesOtomatis[tv.id]) return; 
+            tvSedangDiprosesOtomatis[tv.id] = true;
+
+            const tot = (tv.rental_price || 0) + (tv.food_price || 0);
+            
+            try {
+                await supabase.from('transactions').insert([{ 
+                    tv_id: tv.id, rental_price: tv.rental_price, food_price: tv.food_price, 
+                    total_price: tot, food_details: tv.food_details,
+                    start_time: tv.start_time, 
+                    created_at: getWaktuAsli().toISOString() 
+                }]);
+                
+                await supabase.from('tvs').update({ 
+                    is_active: false, start_time: null, end_time: null, current_package_name: null, 
+                    rental_price: 0, food_price: 0, food_details: '' 
+                }).eq('id', tv.id);
+            } catch(e) {
+                console.error("Gagal memproses TV:", e);
+            } finally {
+                delete tvSedangDiprosesOtomatis[tv.id];
+                jalankanAplikasi();
+            }
+        }
+
+        // ==========================================
+        // FUNGSI HAPUS RIWAYAT TRANSAKSI
+        // ==========================================
+        window.hapusRiwayat = async function(idTransaksi) {
+            if (!confirm("Apakah Anda yakin ingin menghapus riwayat transaksi ini? Pendapatan akan otomatis berkurang.")) return;
+            
+            try {
+                await supabase.from('transactions').delete().eq('id', idTransaksi);
+                muatDataLaporan(); 
+                alert("Transaksi berhasil dihapus.");
+            } catch (err) {
+                alert("Gagal menghapus transaksi.");
+                console.error(err);
+            }
+        };
+
+        // --- SISTEM PENGATURAN ---
+        async function muatDataPengaturan() {
+            const { data: paket } = await supabase.from('packages').select('*').order('price', { ascending: true });
+            if (paket) {
+                daftarPaket = paket;
+                let htmlPaket = '';
+                paket.forEach(p => {
+                    htmlPaket += `
+                        <div class="setting-item">
+                            <span><b>${p.name}</b> (${p.duration_minutes} Mnt) - Rp ${p.price.toLocaleString('id-ID')}</span>
+                            <div class="setting-aksi">
+                                <button type="button" class="btn-edit btn-edit-paket" data-id="${p.id}" data-name="${p.name}" data-duration="${p.duration_minutes}" data-price="${p.price}">Edit</button>
+                                <button type="button" class="btn-hapus btn-hapus-paket" data-id="${p.id}">Hapus</button>
+                            </div>
+                        </div>`;
+                });
+                document.getElementById('list-pengaturan-paket').innerHTML = htmlPaket || '<p>Belum ada paket.</p>';
+            }
+
+            const { data: makanan } = await supabase.from('foods').select('*').order('price', { ascending: true });
+            if (makanan) {
+                daftarMakanan = makanan;
+                let htmlMakanan = '';
+                makanan.forEach(m => {
+                    htmlMakanan += `
+                        <div class="setting-item">
+                            <span><b>${m.name}</b> - Rp ${m.price.toLocaleString('id-ID')}</span>
+                            <div class="setting-aksi">
+                                <button type="button" class="btn-edit btn-edit-makanan" data-id="${m.id}" data-name="${m.name}" data-price="${m.price}">Edit</button>
+                                <button type="button" class="btn-hapus btn-hapus-makanan" data-id="${m.id}">Hapus</button>
+                            </div>
+                        </div>`;
+                });
+                document.getElementById('list-pengaturan-makanan').innerHTML = htmlMakanan || '<p>Belum ada menu makanan.</p>';
+            }
+
+            pasangListenerPengaturan();
+        }
+
+        function pasangListenerPengaturan() {
+            document.querySelectorAll('.btn-edit-paket').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const b = e.currentTarget;
+                    document.getElementById('judul-modal-paket').innerText = "Edit Paket Rental";
+                    document.getElementById('edit-paket-id').value = b.getAttribute('data-id');
+                    document.getElementById('add-paket-nama').value = b.getAttribute('data-name');
+                    document.getElementById('add-paket-durasi').value = b.getAttribute('data-duration');
+                    document.getElementById('add-paket-harga').value = b.getAttribute('data-price');
+                    document.getElementById('modal-tambah-paket').style.display = 'flex';
+                });
+            });
+
+            document.querySelectorAll('.btn-hapus-paket').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    if(!confirm("Yakin ingin menghapus paket ini?")) return;
+                    await supabase.from('packages').delete().eq('id', id);
+                    muatDataPengaturan();
+                    jalankanAplikasi();
+                });
+            });
+
+            document.querySelectorAll('.btn-edit-makanan').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const b = e.currentTarget;
+                    document.getElementById('judul-modal-makanan').innerText = "Edit Menu Makanan";
+                    document.getElementById('edit-makanan-id').value = b.getAttribute('data-id');
+                    document.getElementById('add-makanan-nama').value = b.getAttribute('data-name');
+                    document.getElementById('add-makanan-harga').value = b.getAttribute('data-price');
+                    document.getElementById('modal-tambah-makanan').style.display = 'flex';
+                });
+            });
+
+            document.querySelectorAll('.btn-hapus-makanan').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    if(!confirm("Yakin ingin menghapus menu makanan ini?")) return;
+                    await supabase.from('foods').delete().eq('id', id);
+                    muatDataPengaturan();
+                    jalankanAplikasi();
+                });
+            });
+        }
+
+        document.getElementById('btn-tambah-paket-baru').addEventListener('click', () => {
+            document.getElementById('judul-modal-paket').innerText = "Tambah Paket Rental";
+            document.getElementById('edit-paket-id').value = "";
+            document.getElementById('add-paket-nama').value = "";
+            document.getElementById('add-paket-durasi').value = "";
+            document.getElementById('add-paket-harga').value = "";
+            document.getElementById('modal-tambah-paket').style.display = 'flex';
+        });
+
+        document.getElementById('btn-batal-paket').addEventListener('click', () => {
+            document.getElementById('modal-tambah-paket').style.display = 'none';
+        });
+
+        document.getElementById('btn-simpan-paket').addEventListener('click', async () => {
+            const id = document.getElementById('edit-paket-id').value;
+            const name = document.getElementById('add-paket-nama').value;
+            const duration_minutes = parseInt(document.getElementById('add-paket-durasi').value);
+            const price = parseInt(document.getElementById('add-paket-harga').value);
+            if(!name || !duration_minutes || !price) return alert("Semua kolom harus diisi!");
+
+            if (id) {
+                await supabase.from('packages').update({ name, duration_minutes, price }).eq('id', id);
+            } else {
+                await supabase.from('packages').insert([{ name, duration_minutes, price }]);
+            }
+
+            document.getElementById('modal-tambah-paket').style.display = 'none';
+            muatDataPengaturan();
+            jalankanAplikasi();
+        });
+
+        document.getElementById('btn-tambah-makanan-baru').addEventListener('click', () => {
+            document.getElementById('judul-modal-makanan').innerText = "Tambah Menu Makanan";
+            document.getElementById('edit-makanan-id').value = "";
+            document.getElementById('add-makanan-nama').value = "";
+            document.getElementById('add-makanan-harga').value = "";
+            document.getElementById('modal-tambah-makanan').style.display = 'flex';
+        });
+
+        document.getElementById('btn-batal-makanan').addEventListener('click', () => {
+            document.getElementById('modal-tambah-makanan').style.display = 'none';
+        });
+
+        document.getElementById('btn-simpan-makanan').addEventListener('click', async () => {
+            const id = document.getElementById('edit-makanan-id').value;
+            const name = document.getElementById('add-makanan-nama').value;
+            const price = parseInt(document.getElementById('add-makanan-harga').value);
+            if(!name || !price) return alert("Semua kolom harus diisi!");
+
+            if (id) {
+                await supabase.from('foods').update({ name, price }).eq('id', id);
+            } else {
+                await supabase.from('foods').insert([{ name, price }]);
+            }
+
+            document.getElementById('modal-tambah-makanan').style.display = 'none';
+            muatDataPengaturan();
+            jalankanAplikasi();
+        });
+
+        // --- SISTEM LAPORAN & KALENDER ---
+        async function muatDataLaporan() {
+            document.getElementById('lap-total').innerText = "Memuat...";
+            document.getElementById('list-riwayat').innerHTML = '<p style="color:#94a3b8; text-align:center;">Memuat riwayat...</p>';
+            const { data } = await supabase.from('transactions').select('*').order('created_at', { ascending: false });
+            if(data) { dataTransaksi = data; terapkanFilterLaporan(); }
+        }
+
+        window.ubahFilterLaporan = function(filter, btnElement) {
+            filterAktif = filter;
+            tanggalTerpilihKalender = null; 
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+            
+            const labelMap = { 'harian': 'Hari Ini', 'kemarin': 'Kemarin', 'kemarin_dulu': 'Kemarin Dulu', 'mingguan': 'Minggu Ini', 'bulanan': 'Bulan Ini', 'semua': 'Semua Waktu (Kalender)' };
+            document.getElementById('label-laporan').innerText = `Total Pendapatan ${labelMap[filter]}`;
+            
+            if (filter === 'bulanan' || filter === 'semua') {
+                document.getElementById('box-kalender').style.display = 'block';
+                document.getElementById('judul-riwayat').innerText = "Pilih Tanggal di Kalender untuk Rincian";
+            } else {
+                document.getElementById('box-kalender').style.display = 'none';
+                document.getElementById('judul-riwayat').innerText = "Daftar Riwayat Transaksi";
+            }
+
+            terapkanFilterLaporan();
+        };
+
+        window.geserBulan = function(arah) {
+            kalenderBulanAktif += arah;
+            if (kalenderBulanAktif > 11) {
+                kalenderBulanAktif = 0;
+                kalenderTahunAktif++;
+            } else if (kalenderBulanAktif < 0) {
+                kalenderBulanAktif = 11;
+                kalenderTahunAktif--;
+            }
+            tanggalTerpilihKalender = null; 
+            terapkanFilterLaporan();
+        };
+
+        window.pilihTanggalKalender = function(tanggalStr) {
+            tanggalTerpilihKalender = tanggalStr;
+            renderKalenderBulanan();
+            terapkanFilterLaporan();
+        };
+
+        function terapkanFilterLaporan() {
+            const skrg = getWaktuAsli();
+            const kemarin = new Date(skrg); kemarin.setDate(kemarin.getDate() - 1);
+            const kemarinDulu = new Date(skrg); kemarinDulu.setDate(kemarinDulu.getDate() - 2);
+
+            const tglSekarangWITA = skrg.toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+            const tglKemarinWITA = kemarin.toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+            const tglKemarinDuluWITA = kemarinDulu.toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+            const blnSekarangWITA = skrg.toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar', year: 'numeric', month: '2-digit' });
+
+            let sumTotal = 0, sumRental = 0, sumMakan = 0;
+            let dataDikelompokkan = {};
+
+            dataTransaksi.forEach(t => {
+                const tglTrx = new Date(t.created_at);
+                const tglTrxWITA = tglTrx.toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+                
+                let masukFilter = false;
+
+                if (filterAktif === 'semua') { 
+                    let sesuaiBulanKalender = (tglTrx.getFullYear() === kalenderTahunAktif && tglTrx.getMonth() === kalenderBulanAktif);
+                    if (sesuaiBulanKalender) {
+                        if (tanggalTerpilihKalender) {
+                            masukFilter = (tglTrxWITA === tanggalTerpilihKalender);
+                        } else {
+                            masukFilter = true; 
+                        }
+                    }
+                }
+                else if (filterAktif === 'harian') { masukFilter = (tglTrxWITA === tglSekarangWITA); }
+                else if (filterAktif === 'kemarin') { masukFilter = (tglTrxWITA === tglKemarinWITA); }
+                else if (filterAktif === 'kemarin_dulu') { masukFilter = (tglTrxWITA === tglKemarinDuluWITA); }
+                else if (filterAktif === 'mingguan') {
+                    const selisihMs = skrg.getTime() - tglTrx.getTime();
+                    const selisihHari = selisihMs / (1000 * 60 * 60 * 24);
+                    masukFilter = (selisihHari >= -1 && selisihHari <= 7);
+                }
+                else if (filterAktif === 'bulanan') { 
+                    const blnTrxWITA = tglTrx.toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar', year: 'numeric', month: '2-digit' });
+                    let sesuaiBulan = (blnTrxWITA === blnSekarangWITA);
+                    if (sesuaiBulan) {
+                        if (tanggalTerpilihKalender) {
+                            masukFilter = (tglTrxWITA === tanggalTerpilihKalender);
+                        } else {
+                            masukFilter = true; 
+                        }
+                    }
+                }
+
+                if (masukFilter) {
+                    sumTotal += t.total_price; 
+                    sumRental += t.rental_price; 
+                    sumMakan += t.food_price;
+                    
+                    if (!dataDikelompokkan[tglTrxWITA]) {
+                        dataDikelompokkan[tglTrxWITA] = [];
+                    }
+                    dataDikelompokkan[tglTrxWITA].push(t);
+                }
+            });
+
+            document.getElementById('lap-total').innerText = `Rp ${sumTotal.toLocaleString('id-ID')}`;
+            document.getElementById('lap-rental').innerText = `Rp ${sumRental.toLocaleString('id-ID')}`;
+            document.getElementById('lap-makanan').innerText = `Rp ${sumMakan.toLocaleString('id-ID')}`;
+            
+            if (filterAktif === 'bulanan' || filterAktif === 'semua') {
+                renderKalenderBulanan();
+            }
+
+            let htmlRiwayat = '';
+            const tanggalTersortir = Object.keys(dataDikelompokkan).sort((a, b) => new Date(b) - new Date(a));
+
+            if (tanggalTersortir.length === 0) {
+                htmlRiwayat = '<p style="color:#94a3b8; text-align:center; margin-top:20px;">Belum ada transaksi di rentang waktu/tanggal ini.</p>';
+            } else {
+                let nomorUrut = 0;
+                tanggalTersortir.forEach(tgl => {
+                    nomorUrut += dataDikelompokkan[tgl].length;
+                });
+                
+                tanggalTersortir.forEach(tanggal => {
+                    const dateObj = new Date(tanggal);
+                    const namaHari = dateObj.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Makassar' });
+                    
+                    if (filterAktif !== 'harian' && filterAktif !== 'kemarin' && filterAktif !== 'kemarin_dulu') {
+                        htmlRiwayat += `<div style="background: #e2e8f0; padding: 6px 12px; border-radius: 6px; margin: 15px 0 8px 0; font-size: 12px; font-weight: 700; color: #334155; display: inline-block;">📅 ${namaHari}</div>`;
+                    }
+
+                    dataDikelompokkan[tanggal].forEach(t => {
+                        const jamSelesai = formatJam(t.created_at);
+                        const jamMulai = t.start_time ? formatJam(t.start_time) : '(Tidak tercatat)';
+                        const detailMkn = t.food_details ? `<div class="detail-makanan">${t.food_details}</div>` : '';
+                        
+                        htmlRiwayat += `
+                            <div class="item-riwayat">
+                                <div class="header-riwayat">
+                                    <span><strong style="color: #1877f2;">#${nomorUrut}</strong> | 📺 TV ${t.tv_id}</span>
+                                    <span style="color:#059669;">Rp ${t.total_price.toLocaleString('id-ID')}</span>
+                                </div>
+                                <div class="jam-riwayat">Mulai: ${jamMulai} | Selesai: ${jamSelesai} WITA</div>
+                                <div class="detail-uang">
+                                    <span>Rental: Rp ${t.rental_price.toLocaleString('id-ID')}</span>
+                                    <span>Makanan: Rp ${t.food_price.toLocaleString('id-ID')}</span>
+                                </div>
+                                ${detailMkn}
+                                <div class="action-riwayat">
+                                    <button class="btn-hapus-riwayat" onclick="window.hapusRiwayat(${t.id})">🗑️ Hapus Transaksi</button>
+                                </div>
+                            </div>`;
+                        
+                        nomorUrut--; 
+                    });
+                });
+            }
+
+            document.getElementById('list-riwayat').innerHTML = htmlRiwayat;
+        }
+
+        function renderKalenderBulanan() {
+            const tahun = kalenderTahunAktif;
+            const bulan = kalenderBulanAktif; 
+
+            const namaBulanArr = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            document.getElementById('label-bulan-tahun').innerText = `${namaBulanArr[bulan]} ${tahun}`;
+
+            let pendapatanPerHari = {};
+            dataTransaksi.forEach(t => {
+                let d = new Date(t.created_at);
+                if (d.getFullYear() === tahun && d.getMonth() === bulan) {
+                    let tglKey = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+                    pendapatanPerHari[tglKey] = (pendapatanPerHari[tglKey] || 0) + t.total_price;
+                }
+            });
+
+            const hariPertama = new Date(tahun, bulan, 1).getDay();
+            const jumlahHari = new Date(tahun, bulan + 1, 0).getDate();
+
+            let kalenderHitunganHtml = '';
+            for (let i = 0; i < hariPertama; i++) {
+                kalenderHitunganHtml += `<div class="kalender-sel kosong"></div>`;
+            }
+
+            for (let hari = 1; hari <= jumlahHari; hari++) {
+                let bulanStr = String(bulan + 1).padStart(2, '0');
+                let hariStr = String(hari).padStart(2, '0');
+                let tglFormat = `${tahun}-${bulanStr}-${hariStr}`;
+
+                let totalHariIni = pendapatanPerHari[tglFormat] || 0;
+                let adaTrxClass = totalHariIni > 0 ? 'ada-transaksi' : '';
+                let aktifClass = (tanggalTerpilihKalender === tglFormat) ? 'aktif' : '';
+                let nominalFormatted = totalHariIni > 0 ? `${(totalHariIni/1000).toFixed(0)}rb` : '';
+
+                kalenderHitunganHtml += `
+                    <div class="kalender-sel ${adaTrxClass} ${aktifClass}" onclick="window.pilihTanggalKalender('${tglFormat}')">
+                        <span class="kalender-tgl">${hari}</span>
+                        <span class="kalender-nominal">${nominalFormatted}</span>
+                    </div>`;
+            }
+
+            document.getElementById('grid-tanggal-kalender').innerHTML = kalenderHitunganHtml;
+        }
+
+    </script>
+</body>
+</html>
