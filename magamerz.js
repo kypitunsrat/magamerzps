@@ -17,6 +17,100 @@ let tvSedangDiprosesOtomatis = {};
 let intervalTimerApp = null; 
 let myChartInstance = null;
 
+// ==========================================
+// FUNGSI HELPER (REFACTORING UTILITY)
+// ==========================================
+
+function formatJam(isoString) {
+    if(!isoString) return "";
+    return new Date(isoString).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar', hour12: false });
+}
+
+function getWaktuAsli() {
+    return new Date();
+}
+
+// Helper untuk menyusun HTML Dropdown Paket (Menghilangkan Duplikasi)
+function generatePaketDropdownHTML(defaultText, includePromo = false) {
+    let optWaktu = [], optStik = [];
+    daftarPaket.forEach(p => {
+        const optHtml = `<option value="${p.id}" data-durasi="${p.duration_minutes}" data-harga="${p.price}" data-nama="${p.name} (Rp ${p.price.toLocaleString('id-ID')})">${p.name} - Rp ${p.price.toLocaleString('id-ID')}</option>`;
+        if (p.duration_minutes === 0 || p.name.toLowerCase().includes('stick') || p.name.toLowerCase().includes('stik')) {
+            optStik.push(optHtml);
+        } else {
+            optWaktu.push(optHtml);
+        }
+    });
+
+    let html = `<option value="">-- ${defaultText} --</option>`;
+    if (optWaktu.length > 0) html += `<optgroup label="⏱️ Paket Waktu">${optWaktu.join('')}</optgroup>`;
+    if (optStik.length > 0) html += `<optgroup label="🎮 Tambahan Stick">${optStik.join('')}</optgroup>`;
+
+    if (includePromo) {
+        html += `<optgroup label="🔥 Promo Spesial">
+            <option value="PROMO_1JAM_3JAM" data-durasi="120" data-harga="10000" data-nama="Tambah 1 Jam (Jadi Paket 3 Jam) (Rp 10.000)">🔥 Tambah 1 Jam (Jadi Paket 3 Jam) - Rp 10.000</option>
+            <option value="PROMO_30MNT_3JAM" data-durasi="90" data-harga="5000" data-nama="Tambah 30 Menit (Jadi Paket 3 Jam) (Rp 5.000)">🔥 Tambah 30 Menit (Jadi Paket 3 Jam) - Rp 5.000</option>
+            <option value="KLAIM_BONUS_1JAM" data-durasi="60" data-harga="0" data-nama="🎁 Klaim Bonus 1 Jam (Rp 0)">🎁 Klaim Bonus 1 Jam - Rp 0</option>
+        </optgroup>`;
+    }
+    return html;
+}
+
+// Helper untuk menyusun HTML Dropdown Makanan (Menghilangkan Duplikasi)
+function generateMakananDropdownHTML() {
+    let html = '<option value="">-- Pilih Menu Makanan --</option>';
+    let grupMinuman = [], grupGoreng = [], grupSoto = [], grupLainnya = [];
+
+    daftarMakanan.forEach(m => {
+        let namaLower = m.name.toLowerCase();
+        let opt = `<option value="${m.price}" data-nama="${m.name}">${m.name} (Rp ${m.price.toLocaleString('id-ID')})</option>`;
+        if (namaLower.includes('indomie goreng') || namaLower.includes('mie goreng')) grupGoreng.push(opt);
+        else if (namaLower.includes('indomie soto') || namaLower.includes('mie soto')) grupSoto.push(opt);
+        else if (namaLower.includes('air') || namaLower.includes('teh') || namaLower.includes('floridina') || namaLower.includes('kopi') || namaLower.includes('es') || namaLower.includes('minum')) grupMinuman.push(opt);
+        else grupLainnya.push(opt);
+    });
+
+    if (grupMinuman.length) html += `<optgroup label="🥤 Kelompok Minuman">${grupMinuman.join('')}</optgroup>`;
+    if (grupGoreng.length) html += `<optgroup label="🍝 Kelompok Indomie Goreng">${grupGoreng.join('')}</optgroup>`;
+    if (grupSoto.length) html += `<optgroup label="🍜 Kelompok Indomie Soto">${grupSoto.join('')}</optgroup>`;
+    if (grupLainnya.length) html += `<optgroup label="🍔 Kelompok Lainnya">${grupLainnya.join('')}</optgroup>`;
+    
+    return html;
+}
+
+// Helper Mesin Kalkulator Keuangan (Menghilangkan Duplikasi Hitungan di Laporan)
+function hitungRekapKeuangan(transaksiList) {
+    let rekap = { kotor: 0, rental: 0, makan: 0, pem: 0, peng: 0, bersih: 0 };
+    transaksiList.forEach(t => {
+        if (t.total_price >= 0) {
+            let ren = t.rental_price || 0;
+            let mak = t.food_price || 0;
+            let pem = t.total_price - ren - mak;
+            rekap.rental += ren;
+            rekap.makan += mak;
+            rekap.pem += pem;
+            rekap.kotor += t.total_price;
+        } else {
+            rekap.peng += t.total_price;
+        }
+    });
+    rekap.bersih = rekap.kotor + rekap.peng;
+    return rekap;
+}
+
+function updateUIRekapKeuangan(rekap) {
+    document.getElementById('lap-total-kotor').innerText = `Rp ${rekap.kotor.toLocaleString('id-ID')}`;
+    document.getElementById('lap-total-bersih').innerText = `Rp ${rekap.bersih.toLocaleString('id-ID')}`;
+    document.getElementById('lap-rental').innerText = `Rp ${rekap.rental.toLocaleString('id-ID')}`;
+    document.getElementById('lap-makanan').innerText = `Rp ${rekap.makan.toLocaleString('id-ID')}`;
+    document.getElementById('lap-pemasukan').innerText = `+ Rp ${rekap.pem.toLocaleString('id-ID')}`;
+    document.getElementById('lap-pengeluaran').innerText = `- Rp ${Math.abs(rekap.peng).toLocaleString('id-ID')}`;
+}
+
+// ==========================================
+// CORE SYSTEM & AUTH
+// ==========================================
+
 function cekTemaAwal() {
     const temaSimpanan = localStorage.getItem('theme');
     if (temaSimpanan === 'dark') {
@@ -50,10 +144,6 @@ function putarBunyiAlarm() {
     } catch (e) {
         console.log("Audio API dicegah oleh browser.");
     }
-}
-
-function getWaktuAsli() {
-    return new Date();
 }
 
 window.prosesLogin = async function() {
@@ -143,11 +233,6 @@ function rutinitasSistem() {
     } 
 }
 
-function formatJam(isoString) {
-    if(!isoString) return "";
-    return new Date(isoString).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar', hour12: false });
-}
-
 window.pindahTab = function(tabName) {
     document.querySelectorAll('.page, .nav-item').forEach(el => el.classList.remove('active'));
     document.getElementById('page-' + tabName).classList.add('active');
@@ -213,26 +298,17 @@ function hitungSisaWaktu(endTime) {
     return j > 0 ? `${j}j ${m}m` : `${m}m ${s}s`;
 }
 
+// ==========================================
+// TRANSAKSI & MODAL
+// ==========================================
+
 window.klikTV = function(id) {
     tvTerpilih = id; document.getElementById('modal-tv-id').innerText = id;
     const formatter = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit', hour12: false });
     document.getElementById('input-jam-mulai').value = formatter.format(getWaktuAsli()); 
 
-    let optWaktu = [], optStik = [];
-    daftarPaket.forEach(p => {
-        const optHtml = `<option value="${p.id}" data-durasi="${p.duration_minutes}" data-harga="${p.price}" data-nama="${p.name}">${p.name} (Rp ${p.price.toLocaleString('id-ID')})</option>`;
-        if (p.duration_minutes === 0 || p.name.toLowerCase().includes('stick') || p.name.toLowerCase().includes('stik')) {
-            optStik.push(optHtml);
-        } else {
-            optWaktu.push(optHtml);
-        }
-    });
-
-    let finalSelectHtml = '<option value="">-- Pilih Paket Rental --</option>';
-    if(optWaktu.length > 0) finalSelectHtml += `<optgroup label="⏱️ Paket Waktu">${optWaktu.join('')}</optgroup>`;
-    if(optStik.length > 0) finalSelectHtml += `<optgroup label="🎮 Tambahan Stick">${optStik.join('')}</optgroup>`;
-
-    document.getElementById('pilihan-paket').innerHTML = finalSelectHtml;
+    // Penggunaan Helper Refactoring
+    document.getElementById('pilihan-paket').innerHTML = generatePaketDropdownHTML('Pilih Paket Rental', false);
     document.getElementById('modal-rental').style.display = 'flex';
 };
 
@@ -249,48 +325,10 @@ window.klikTVAktif = function(id) {
 
     document.getElementById('teks-total-aktif').innerText = `Rp ${( (tv.rental_price || 0) + (tv.food_price || 0) ).toLocaleString('id-ID')}`;
 
-    let htmlPilihanMakanan = '<option value="">-- Pilih Menu Makanan --</option>';
-    let grupMinuman = [], grupGoreng = [], grupSoto = [], grupLainnya = [];
-
-    daftarMakanan.forEach(m => {
-        let namaLower = m.name.toLowerCase();
-        let opt = `<option value="${m.price}" data-nama="${m.name}">${m.name} (Rp ${m.price.toLocaleString('id-ID')})</option>`;
-        if (namaLower.includes('indomie goreng') || namaLower.includes('mie goreng')) grupGoreng.push(opt);
-        else if (namaLower.includes('indomie soto') || namaLower.includes('mie soto')) grupSoto.push(opt);
-        else if (namaLower.includes('air') || namaLower.includes('teh') || namaLower.includes('floridina') || namaLower.includes('kopi') || namaLower.includes('es') || namaLower.includes('minum')) grupMinuman.push(opt);
-        else grupLainnya.push(opt);
-    });
-
-    if (grupMinuman.length) htmlPilihanMakanan += `<optgroup label="🥤 Kelompok Minuman">${grupMinuman.join('')}</optgroup>`;
-    if (grupGoreng.length) htmlPilihanMakanan += `<optgroup label="🍝 Kelompok Indomie Goreng">${grupGoreng.join('')}</optgroup>`;
-    if (grupSoto.length) htmlPilihanMakanan += `<optgroup label="🍜 Kelompok Indomie Soto">${grupSoto.join('')}</optgroup>`;
-    if (grupLainnya.length) htmlPilihanMakanan += `<optgroup label="🍔 Kelompok Lainnya">${grupLainnya.join('')}</optgroup>`;
-
-    document.getElementById('pilihan-makanan').innerHTML = htmlPilihanMakanan;
+    // Penggunaan Helper Refactoring
+    document.getElementById('pilihan-makanan').innerHTML = generateMakananDropdownHTML();
+    document.getElementById('pilihan-tambah-waktu').innerHTML = generatePaketDropdownHTML('Pilih Durasi / Tambahan', true);
     
-    let optWaktu = [], optStik = [];
-    daftarPaket.forEach(p => {
-        const optHtml = `<option value="${p.id}" data-durasi="${p.duration_minutes}" data-harga="${p.price}" data-nama="${p.name} (Rp ${p.price.toLocaleString('id-ID')})">${p.name} - Rp ${p.price.toLocaleString('id-ID')}</option>`;
-        if (p.duration_minutes === 0 || p.name.toLowerCase().includes('stick') || p.name.toLowerCase().includes('stik')) {
-            optStik.push(optHtml);
-        } else {
-            optWaktu.push(optHtml);
-        }
-    });
-
-    let opsiTambahWaktuHTML = '<option value="">-- Pilih Durasi / Tambahan --</option>';
-    if(optWaktu.length > 0) opsiTambahWaktuHTML += `<optgroup label="⏱️ Paket Waktu">${optWaktu.join('')}</optgroup>`;
-    if(optStik.length > 0) opsiTambahWaktuHTML += `<optgroup label="🎮 Tambahan Stick">${optStik.join('')}</optgroup>`;
-
-    opsiTambahWaktuHTML += `<optgroup label="🔥 Promo Spesial">`;
-    opsiTambahWaktuHTML += `<option value="PROMO_1JAM_3JAM" data-durasi="120" data-harga="10000" data-nama="Tambah 1 Jam (Jadi Paket 3 Jam) (Rp 10.000)">🔥 Tambah 1 Jam (Jadi Paket 3 Jam) - Rp 10.000</option>`;
-    opsiTambahWaktuHTML += `<option value="PROMO_30MNT_3JAM" data-durasi="90" data-harga="5000" data-nama="Tambah 30 Menit (Jadi Paket 3 Jam) (Rp 5.000)">🔥 Tambah 30 Menit (Jadi Paket 3 Jam) - Rp 5.000</option>`;
-    opsiTambahWaktuHTML += `<option value="KLAIM_BONUS_1JAM" data-durasi="60" data-harga="0" data-nama="🎁 Klaim Bonus 1 Jam (Rp 0)">🎁 Klaim Bonus 1 Jam - Rp 0</option>`;
-    opsiTambahWaktuHTML += `</optgroup>`;
-
-    document.getElementById('pilihan-tambah-waktu').innerHTML = opsiTambahWaktuHTML;
-    
-    // PEMBARUAN: Reset angka makanan setiap kali modal dibuka
     document.getElementById('input-qty-makanan').value = 1;
     document.getElementById('modal-aktif').style.display = 'flex';
 };
@@ -493,7 +531,6 @@ window.tambahWaktu = async function() {
     jalankanAplikasi();
 };
 
-// PEMBARUAN: Fungsi Tambah Makanan Sekarang Bisa Menghitung Qty
 window.tambahMakanan = async function() {
     const sel = document.getElementById('pilihan-makanan');
     const opt = sel.options[sel.selectedIndex];
@@ -520,7 +557,7 @@ window.tambahMakanan = async function() {
     document.getElementById('teks-total-aktif').innerText = `Rp ${(tv.rental_price + hargaBaru).toLocaleString('id-ID')}`;
 
     sel.selectedIndex = 0; 
-    document.getElementById('input-qty-makanan').value = 1; // Reset Qty
+    document.getElementById('input-qty-makanan').value = 1; 
     jalankanAplikasi();
 };
 
@@ -586,6 +623,10 @@ window.hapusRiwayat = async function(idTransaksi) {
         alert("Terjadi kesalahan sistem saat menghapus.");
     }
 };
+
+// ==========================================
+// PENGATURAN & MASTER DATA
+// ==========================================
 
 async function muatDataPengaturan() {
     const { data: paket } = await supabase.from('packages').select('*').order('price', { ascending: true });
@@ -739,6 +780,10 @@ document.getElementById('btn-simpan-makanan').addEventListener('click', async ()
     muatDataPengaturan(); jalankanAplikasi();
 });
 
+// ==========================================
+// LAPORAN & GRAFIK
+// ==========================================
+
 function renderGrafik(labelData, pointData) {
     const ctx = document.getElementById('laporanChart').getContext('2d');
     document.getElementById('box-grafik').style.display = 'block';
@@ -792,29 +837,9 @@ async function muatDataLaporan() {
 
         const { data: rawData } = await supabase.from('transactions').select('tv_id, total_price, rental_price, food_price');
         if (rawData) {
-            let sumKotor = 0, sumRen = 0, sumMak = 0, sumPem = 0, sumPeng = 0;
-            rawData.forEach(t => {
-                if(t.tv_id !== 0) { 
-                    sumRen += t.rental_price; 
-                    sumMak += t.food_price;
-                    sumKotor += t.total_price;
-                } else {
-                    if(t.total_price >= 0) {
-                        sumPem += t.total_price;
-                        sumKotor += t.total_price;
-                    } else {
-                        sumPeng += t.total_price;
-                    }
-                }
-            });
-            let sumBersih = sumKotor + sumPeng; 
-            
-            document.getElementById('lap-total-kotor').innerText = `Rp ${sumKotor.toLocaleString('id-ID')}`;
-            document.getElementById('lap-total-bersih').innerText = `Rp ${sumBersih.toLocaleString('id-ID')}`;
-            document.getElementById('lap-rental').innerText = `Rp ${sumRen.toLocaleString('id-ID')}`;
-            document.getElementById('lap-makanan').innerText = `Rp ${sumMak.toLocaleString('id-ID')}`;
-            document.getElementById('lap-pemasukan').innerText = `+ Rp ${sumPem.toLocaleString('id-ID')}`;
-            document.getElementById('lap-pengeluaran').innerText = `- Rp ${Math.abs(sumPeng).toLocaleString('id-ID')}`;
+            // Penggunaan Helper Refactoring Kalkulator
+            const rekap = hitungRekapKeuangan(rawData);
+            updateUIRekapKeuangan(rekap);
         }
 
     } else {
@@ -950,8 +975,8 @@ function renderRekapBulanan(rekapData) {
 }
 
 function terapkanFilterLaporan() {
-    let sumKotor = 0, sumRental = 0, sumMakan = 0, sumPem = 0, sumPeng = 0;
     let dataDikelompokkan = {};
+    let dataValidUntukDihitung = [];
 
     dataTransaksi.forEach(t => {
         const tglTrx = new Date(t.created_at);
@@ -963,32 +988,15 @@ function terapkanFilterLaporan() {
         }
 
         if (masukFilter) {
-            if (t.tv_id !== 0) {
-                sumRental += t.rental_price; 
-                sumMakan += t.food_price;
-                sumKotor += t.total_price;
-            } else {
-                if (t.total_price >= 0) {
-                    sumPem += t.total_price;
-                    sumKotor += t.total_price;
-                } else {
-                    sumPeng += t.total_price;
-                }
-            }
-            
+            dataValidUntukDihitung.push(t);
             if (!dataDikelompokkan[tglTrxWITA]) dataDikelompokkan[tglTrxWITA] = [];
             dataDikelompokkan[tglTrxWITA].push(t);
         }
     });
 
-    let sumBersih = sumKotor + sumPeng; // sumPeng sudah berbentuk minus
-
-    document.getElementById('lap-total-kotor').innerText = `Rp ${sumKotor.toLocaleString('id-ID')}`;
-    document.getElementById('lap-total-bersih').innerText = `Rp ${sumBersih.toLocaleString('id-ID')}`;
-    document.getElementById('lap-rental').innerText = `Rp ${sumRental.toLocaleString('id-ID')}`;
-    document.getElementById('lap-makanan').innerText = `Rp ${sumMakan.toLocaleString('id-ID')}`;
-    document.getElementById('lap-pemasukan').innerText = `+ Rp ${sumPem.toLocaleString('id-ID')}`;
-    document.getElementById('lap-pengeluaran').innerText = `- Rp ${Math.abs(sumPeng).toLocaleString('id-ID')}`;
+    // Penggunaan Helper Refactoring Kalkulator
+    const rekap = hitungRekapKeuangan(dataValidUntukDihitung);
+    updateUIRekapKeuangan(rekap);
     
     if (filterAktif === 'bulanan') renderKalenderBulanan();
 
