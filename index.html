@@ -56,7 +56,7 @@
             <div id="app">Memuat data TV...</div>
             
             <div class="dashboard-action-bar">
-                <button class="btn-action-main btn-masuk" onclick="window.bukaModalPemasukan()">➕ Kas Masuk / Tukar Dana</button>
+                <button class="btn-action-main btn-masuk" onclick="window.bukaModalPemasukan()">➕ Kas Masuk / Genapin Saldo</button>
                 <button class="btn-action-main btn-keluar" onclick="window.bukaModalPengeluaran()">📉 Catat Pengeluaran</button>
             </div>
         </div>
@@ -85,7 +85,7 @@
                         <strong id="lap-makanan">Rp 0</strong>
                     </div>
                     <div class="split-item" style="border-left: 3px solid #10b981;">
-                        <span>➕ Kas Masuk / Lainnya</span>
+                        <span>➕ Kas Masuk</span>
                         <strong id="lap-pemasukan" style="color: #10b981;">Rp 0</strong>
                     </div>
                     <div class="split-item" style="border-left: 3px solid #ef4444;">
@@ -212,9 +212,13 @@
             
             <hr class="pemisah">
 
+            <!-- PEMBARUAN: Ditambahkan Input Qty Makanan -->
             <span class="label-input">Beli Makanan / Minuman:</span>
-            <select id="pilihan-makanan"></select>
-            <button class="btn btn-makanan" onclick="window.tambahMakanan()">+ Catat Pembelian Makanan</button>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <select id="pilihan-makanan" style="flex: 3; margin: 0;"></select>
+                <input type="number" id="input-qty-makanan" value="1" min="1" style="flex: 1; margin: 0; text-align: center;" title="Jumlah (Qty)">
+            </div>
+            <button class="btn btn-makanan" style="margin-top: 15px;" onclick="window.tambahMakanan()">+ Catat Pembelian Makanan</button>
             
             <div class="btn-group">
                 <button class="btn btn-batal" onclick="window.tutupModalAktif()">Tutup</button>
@@ -349,7 +353,7 @@
         </div>
     </div>
 
-    <!-- Memanggil file app.js yang sudah kita pisahkan -->
+    <!-- Memanggil file magamerz.js -->
     <script type="module" src="magamerz.js"></script>
 
 </body>
