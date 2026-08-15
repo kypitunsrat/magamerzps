@@ -289,6 +289,9 @@ window.klikTVAktif = function(id) {
     opsiTambahWaktuHTML += `</optgroup>`;
 
     document.getElementById('pilihan-tambah-waktu').innerHTML = opsiTambahWaktuHTML;
+    
+    // PEMBARUAN: Reset angka makanan setiap kali modal dibuka
+    document.getElementById('input-qty-makanan').value = 1;
     document.getElementById('modal-aktif').style.display = 'flex';
 };
 
@@ -490,15 +493,22 @@ window.tambahWaktu = async function() {
     jalankanAplikasi();
 };
 
+// PEMBARUAN: Fungsi Tambah Makanan Sekarang Bisa Menghitung Qty
 window.tambahMakanan = async function() {
     const sel = document.getElementById('pilihan-makanan');
     const opt = sel.options[sel.selectedIndex];
-    const hrg = parseInt(opt.value);
-    if (!hrg) return alert("Pilih makanan!");
+    const hrgSatuan = parseInt(opt.value);
     
+    const qty = parseInt(document.getElementById('input-qty-makanan').value) || 1;
+    
+    if (!hrgSatuan) return alert("Pilih makanan!");
+    if (qty < 1) return alert("Jumlah minimal 1!");
+    
+    const hrgTotalItem = hrgSatuan * qty; 
     const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
-    const hargaBaru = (tv.food_price || 0) + hrg;
-    let formatItem = `${opt.getAttribute('data-nama')} (Rp ${hrg.toLocaleString('id-ID')})`;
+    const hargaBaru = (tv.food_price || 0) + hrgTotalItem;
+    
+    let formatItem = `${qty}x ${opt.getAttribute('data-nama')} (Rp ${hrgTotalItem.toLocaleString('id-ID')})`;
     let detailBaru = (tv.food_details && tv.food_details.trim() !== "") ? tv.food_details + "<br>• " + formatItem : "• " + formatItem;
 
     await supabase.from('tvs').update({ food_price: hargaBaru, food_details: detailBaru }).eq('id', tvTerpilih);
@@ -510,6 +520,7 @@ window.tambahMakanan = async function() {
     document.getElementById('teks-total-aktif').innerText = `Rp ${(tv.rental_price + hargaBaru).toLocaleString('id-ID')}`;
 
     sel.selectedIndex = 0; 
+    document.getElementById('input-qty-makanan').value = 1; // Reset Qty
     jalankanAplikasi();
 };
 
@@ -1103,6 +1114,7 @@ function renderKalenderBulanan() {
     }
     document.getElementById('grid-tanggal-kalender').innerHTML = kalenderHitunganHtml;
 }
+
 // ==========================================
 // REGISTRASI SERVICE WORKER UNTUK PWA
 // ==========================================
@@ -1110,21 +1122,20 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
             .then(registration => {
-                console.log('Service Worker berhasil didaftarkan:', registration.scope);
+                console.log('Mantap bro! Service Worker berhasil didaftarkan:', registration.scope);
                 
-                // Deteksi jika ada update SW baru yang menunggu
                 registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                             console.log('Ada update aplikasi baru! Auto-refresh...');
-                            window.location.reload(); // Refresh otomatis kalau ada update
+                            window.location.reload(); 
                         }
                     });
                 });
             })
             .catch(err => {
-                console.log('Wah, Service Worker gagal:', err);
+                console.log('Waduh, Service Worker gagal:', err);
             });
     });
 }
