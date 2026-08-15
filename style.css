@@ -31,58 +31,8 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); margi
 
 #main-app-container { display: none; padding-bottom: 90px; }
 
-.app-header { 
-    background: var(--header-gradient); 
-    padding: 20px 20px 30px 20px; 
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4); 
-    margin-bottom: 25px; 
-    border-bottom: none; 
-    border-radius: 0 0 24px 24px; 
-    position: relative; 
-    overflow: hidden; 
-    transition: background 0.3s;
-}
-
-.app-header::before {
-    content: '△ ◯ ✕ ◻   △ ◯ ✕ ◻   △ ◯ ✕ ◻\A ✕ ◻ △ ◯   ✕ ◻ △ ◯   ✕ ◻ △ ◯\A ◯ ✕ ◻ △   ◯ ✕ ◻ △   ◯ ✕ ◻ △\A △ ◯ ✕ ◻   △ ◯ ✕ ◻   △ ◯ ✕ ◻';
-    white-space: pre; position: absolute; top: -50px; left: -20px; font-size: 65px; line-height: 1.5; color: rgba(255, 255, 255, 0.05); font-family: Arial, sans-serif; font-weight: bold; pointer-events: none; z-index: 0; letter-spacing: 25px; transform: rotate(-8deg);
-}
-
-.app-header::after { 
-    content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 50%); pointer-events: none; z-index: 0; 
-}
-
-.header-content { position: relative; z-index: 1; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; }
-
-.app-header-brand { display: flex; align-items: center; gap: 12px; text-align: left; }
-.app-header-brand img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.9); box-shadow: 0 4px 12px rgba(0,0,0,0.3); background: #fff; }
-.app-header h2 { margin: 0 0 6px 0; font-size: 20px; color: #ffffff; font-weight: 800; letter-spacing: 0.2px; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-
-.waktu-badge { background: rgba(255, 255, 255, 0.15); padding: 5px 12px; border-radius: 20px; display: inline-block; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.2); }
-.waktu-badge span { color: #f8fafc; font-size: 11px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
-
-.btn-theme-toggle { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; backdrop-filter: blur(5px); transition: 0.2s; position: absolute; top: 20px; right: 20px; z-index: 2; }
-.btn-theme-toggle:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
-
-.header-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; width: 100%; }
-.h-stat { background: var(--bg-card); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: background 0.3s; }
-.h-stat.merah { color: #dc2626; }
-.h-stat.hijau { color: #16a34a; }
-.h-stat.biru { color: #0ea5e9; }
-
-.page { display: none; padding: 0 15px; }
-.page.active { display: block; }
-
-.dashboard-action-bar { margin-top: 15px; display: flex; flex-direction: row; gap: 10px; }
-.btn-action-main { color: white; flex: 1; padding: 14px; border: none; border-radius: 16px; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.1s; }
-.btn-action-main:active { transform: scale(0.98); }
-.btn-masuk { background: linear-gradient(135deg, #1877f2, #0284c7); }
-.btn-keluar { background: linear-gradient(135deg, #ef4444, #dc2626); }
-
-.grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-
 /* ==========================================
-   ANIMASI KOTAK TV (KEYFRAMES & TRANSISI)
+   ANIMASI KEYFRAMES GLOBAL
    ========================================== */
 
 @keyframes pulse-red {
@@ -96,6 +46,153 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); margi
     100% { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes pageTransition {
+    0% { opacity: 0; transform: translateY(15px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slowPan {
+    0% { transform: rotate(-8deg) translateY(0) translateX(0); }
+    50% { transform: rotate(-8deg) translateY(-15px) translateX(-10px); }
+    100% { transform: rotate(-8deg) translateY(0) translateX(0); }
+}
+
+@keyframes cinematicPulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 0.9; transform: scale(1.05); }
+    100% { opacity: 0.4; transform: scale(1); }
+}
+
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* ==========================================
+   HEADER & NAVBAR
+   ========================================== */
+
+.app-header { 
+    background: var(--header-gradient); 
+    background-size: 200% 200%; 
+    animation: gradientFlow 10s ease infinite; 
+    padding: 20px 20px 30px 20px; 
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4); 
+    margin-bottom: 25px; 
+    border-bottom: none; 
+    border-radius: 0 0 24px 24px; 
+    position: relative; 
+    overflow: hidden; 
+    transition: background 0.3s;
+}
+
+.app-header::before {
+    content: '△ ◯ ✕ ◻   △ ◯ ✕ ◻   △ ◯ ✕ ◻\A ✕ ◻ △ ◯   ✕ ◻ △ ◯   ✕ ◻ △ ◯\A ◯ ✕ ◻ △   ◯ ✕ ◻ △   ◯ ✕ ◻ △\A △ ◯ ✕ ◻   △ ◯ ✕ ◻   △ ◯ ✕ ◻';
+    white-space: pre; position: absolute; top: -50px; left: -20px; font-size: 65px; line-height: 1.5; 
+    color: rgba(255, 255, 255, 0.03); 
+    font-family: Arial, sans-serif; font-weight: bold; pointer-events: none; z-index: 0; 
+    letter-spacing: 25px; transform: rotate(-8deg);
+    animation: slowPan 30s linear infinite; 
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1); 
+}
+
+.app-header::after { 
+    content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; 
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 50%); 
+    pointer-events: none; z-index: 0; 
+    animation: cinematicPulse 6s ease-in-out infinite;
+    transition: transform 0.8s ease;
+}
+
+/* EFEK HOVER KHUSUS PC (MOUSE) */
+@media (hover: hover) and (pointer: fine) {
+    .app-header:hover::before {
+        color: rgba(255, 255, 255, 0.12); 
+        letter-spacing: 40px; 
+        filter: drop-shadow(0px 0px 8px rgba(255, 255, 255, 0.5)); 
+    }
+
+    .app-header:hover::after {
+        transform: scale(1.15); 
+    }
+
+    .app-header-brand img:hover {
+        transform: scale(1.1) rotate(5deg);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    }
+
+    .h-stat:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    }
+}
+
+.header-content { position: relative; z-index: 1; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; }
+
+.app-header-brand { display: flex; align-items: center; gap: 12px; text-align: left; }
+.app-header-brand img { 
+    width: 52px; height: 52px; border-radius: 50%; object-fit: cover; 
+    border: 2px solid rgba(255,255,255,0.9); box-shadow: 0 4px 12px rgba(0,0,0,0.3); 
+    background: #fff; 
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s;
+}
+
+/* EFEK SENTUH KHUSUS HP */
+.app-header-brand img:active {
+    transform: scale(0.95);
+}
+
+.app-header h2 { margin: 0 0 6px 0; font-size: 20px; color: #ffffff; font-weight: 800; letter-spacing: 0.2px; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+
+.waktu-badge { background: rgba(255, 255, 255, 0.15); padding: 5px 12px; border-radius: 20px; display: inline-block; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.2); }
+.waktu-badge span { color: #f8fafc; font-size: 11px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+
+.btn-theme-toggle { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; backdrop-filter: blur(5px); transition: 0.2s; position: absolute; top: 20px; right: 20px; z-index: 2; }
+.btn-theme-toggle:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
+
+.header-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; width: 100%; }
+.h-stat { 
+    background: var(--bg-card); border: 1px solid var(--border-color); padding: 6px 12px; 
+    border-radius: 12px; font-size: 12px; font-weight: 700; color: var(--text-main); 
+    display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+    cursor: default;
+}
+
+/* EFEK SENTUH KHUSUS HP */
+.h-stat:active {
+    transform: scale(0.95);
+    background: var(--bg-hover);
+}
+
+.h-stat.merah { color: #dc2626; }
+.h-stat.hijau { color: #16a34a; }
+.h-stat.biru { color: #0ea5e9; }
+
+/* ==========================================
+   HALAMAN & TRANSISI TAB
+   ========================================== */
+
+.page { display: none; padding: 0 15px; }
+
+.page.active { 
+    display: block; 
+    animation: pageTransition 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.dashboard-action-bar { margin-top: 15px; display: flex; flex-direction: row; gap: 10px; }
+.btn-action-main { color: white; flex: 1; padding: 14px; border: none; border-radius: 16px; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.1s; }
+.btn-action-main:active { transform: scale(0.98); }
+.btn-masuk { background: linear-gradient(135deg, #1877f2, #0284c7); }
+.btn-keluar { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+.grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+
+/* ==========================================
+   KOTAK TV RENTAL
+   ========================================== */
+
 .tv-box { 
     position: relative; 
     overflow: hidden; 
@@ -104,7 +201,6 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); margi
     text-align: center; 
     font-weight: 600; 
     cursor: pointer; 
-    /* Transisi Mulus untuk perpindahan warna dan posisi */
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
     display: flex; 
     flex-direction: column; 
@@ -113,7 +209,6 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); margi
     border: 1px solid rgba(0,0,0,0.05); 
 }
 
-/* Efek saat diklik dan melayang (hover) */
 .tv-box:active { transform: scale(0.95); }
 .tv-box:hover { transform: translateY(-4px); }
 
@@ -124,12 +219,10 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); margi
     text-align: right; letter-spacing: -2px; z-index: 0; 
     transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); 
 }
-/* Efek pergerakan lambang PS saat hover */
 .tv-box:hover::before { transform: scale(1.15) rotate(-5deg); }
 
 .tv-box h3, .tv-box .jam-main, .tv-box .countdown, .tv-box .rincian, .tv-box p { position: relative; z-index: 1; }
 
-/* PERUBAHAN: Warna solid untuk smooth transition DOM Diffing */
 .bg-green { 
     background-color: #16a34a; 
     color: white; 
@@ -139,16 +232,11 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); margi
 .bg-red { 
     background-color: #dc2626; 
     color: white; 
-    /* Menjalankan efek jantung berdetak jika TV hidup */
     animation: pulse-red 2s infinite ease-in-out; 
 }
 
-/* PERUBAHAN: Sembunyikan elemen secara default (CSS Only, No JS inline style) */
-.tv-box .jam-main, .tv-box .countdown, .tv-box .rincian, .tv-box p {
-    display: none;
-}
+.tv-box .jam-main, .tv-box .countdown, .tv-box .rincian, .tv-box p { display: none; }
 
-/* PERUBAHAN: Tampilkan dengan animasi Slide-Up menyesuaikan class (state) parent */
 .tv-box.bg-green p { 
     display: block;
     animation: fadeInSlideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; 
@@ -225,7 +313,7 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); margi
 .btn-hapus-riwayat:hover { background: #fee2e2; }
 
 /* ==========================================
-   MODAL & LAINNYA
+   PENGATURAN & LAINNYA
    ========================================== */
 
 .setting-card { background: var(--bg-card); padding: 20px; border-radius: 16px; margin-bottom: 15px; border: 1px solid var(--border-color); }
@@ -241,6 +329,10 @@ body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); margi
 .nav-item { flex: 1; text-align: center; font-size: 11px; font-weight: 700; color: var(--text-muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; transition: color 0.2s;}
 .nav-item.active { color: #1877f2; }
 .nav-icon { font-size: 20px; }
+
+/* ==========================================
+   MODAL WINDOW (POP-UP)
+   ========================================== */
 
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); justify-content: center; align-items: flex-end; z-index: 100; animation: fadeInSlideUp 0.3s ease-out; }
 .modal-content { background: var(--bg-card); width: 100%; max-width: 500px; padding: 25px 20px; border-radius: 24px 24px 0 0; box-sizing: border-box; max-height: 90vh; overflow-y: auto; color: var(--text-main); border: 1px solid var(--border-color); }
