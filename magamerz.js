@@ -271,17 +271,22 @@ function renderTampilan(tvData) {
     let aktifCount = 0, tersediaCount = 0;
     tvData.forEach(tv => { if(tv.is_active) aktifCount++; else tersediaCount++; });
 
-    document.getElementById('header-stats-container').innerHTML = `
+    // PERBAIKAN: DOM Diffing untuk Header Stats agar tidak loncat saat hover
+    let statsContainer = document.getElementById('header-stats-container');
+    let htmlStatsBaru = `
         <div class="h-stat merah"><span style="font-size:14px;">🎮</span> ${aktifCount} Main</div>
         <div class="h-stat hijau"><span style="font-size:14px;">✅</span> ${tersediaCount} Kosong</div>
         <div class="h-stat biru"><span style="font-size:14px;">📺</span> ${tvData.length} Total</div>
     `;
 
+    if (statsContainer.innerHTML.trim() !== htmlStatsBaru.trim()) {
+        statsContainer.innerHTML = htmlStatsBaru;
+    }
+
     let appContainer = document.getElementById('app');
     let gridContainer = document.getElementById('tv-grid-container');
 
     // INISIALISASI DOM: Hanya membuat kerangka kotak TV satu kali saja
-    // (Menghapus tag style="display:none;" karena sekarang ditangani CSS)
     if (!gridContainer) {
         appContainer.innerHTML = '<div class="grid-container" id="tv-grid-container"></div>';
         gridContainer = document.getElementById('tv-grid-container');
@@ -328,8 +333,7 @@ function renderTampilan(tvData) {
             if(jamMain.innerText !== jamRange) jamMain.innerText = jamRange;
             if(countdown.innerText !== sisa) countdown.innerText = sisa;
             
-            // PERBAIKAN: Rincian harga di bawah kotak divalidasi dengan DOM Diffing
-            // Agar tidak menimpa HTML secara paksa setiap detik yang merusak transisi CSS
+            // Rincian harga di bawah kotak divalidasi dengan DOM Diffing
             let htmlRincianBaru = `
                 <span>Rental: Rp ${Number(tv.rental_price).toLocaleString('id-ID')}</span>
                 <span>Makanan: Rp ${Number(tv.food_price || 0).toLocaleString('id-ID')}</span>
@@ -523,6 +527,8 @@ window.prosesRental = async function() {
     if (dSelesai > dBatasMalam) dSelesai = dBatasMalam;
 
     const selesaiIso = dSelesai.toISOString();
+    
+    // PERBAIKAN: Menghapus format harga ganda dari atribut data-nama
     let namaPaketFormatted = opt.getAttribute('data-nama');
 
     await supabase.from('tvs').update({ 
@@ -614,6 +620,10 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
     if (tvSedangDiprosesOtomatis[tv.id]) return; 
     tvSedangDiprosesOtomatis[tv.id] = true;
 
+    // PERBAIKAN: Matikan status aktif di memori lokal detik ini juga (Optimistic Update).
+    // Jadi, fungsi putaran 1 detik berikutnya tidak akan membacanya dan mencegah transaksi ganda.
+    tv.is_active = false; 
+
     if (isAutoAlarm) putarBunyiAlarm();
 
     const tot = (tv.rental_price || 0) + (tv.food_price || 0);
@@ -642,8 +652,14 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
         }).eq('id', tv.id);
     } catch(e) {
         console.error("Gagal memproses TV:", e);
+        // Kembalikan status jika ternyata gagal tersimpan di database
+        tv.is_active = true; 
     } finally {
-        delete tvSedangDiprosesOtomatis[tv.id];
+        // Beri jeda 2 detik sebelum membuka gembok untuk keamanan ekstra
+        setTimeout(() => {
+            delete tvSedangDiprosesOtomatis[tv.id];
+        }, 2000);
+        
         jalankanAplikasi();
         if(document.getElementById('page-laporan').classList.contains('active')){
             muatDataLaporan();
