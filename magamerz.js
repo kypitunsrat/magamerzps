@@ -14,6 +14,7 @@ let kalenderBulanAktif = new Date().getMonth();
 let offsetMingguan = 0; 
 
 let tvSedangDiprosesOtomatis = {}; 
+let blokirAutoCheckout = {}; // PERBAIKAN: Kunci gembok anti-dobel transaksi
 let intervalTimerApp = null; 
 let myChartInstance = null;
 
@@ -222,6 +223,16 @@ function rutinitasSistem() {
         let adaYangHabis = false;
         dataTVGlobal.forEach(tv => {
             if (tv.is_active && tv.end_time && new Date(tv.end_time).getTime() <= getWaktuAsli().getTime()) {
+                
+                // PERBAIKAN: Jika TV ini sedang terblokir (sedang checkout/sudah checkout), lewati!
+                if (blokirAutoCheckout[tv.id]) return; 
+
+                // ZONA AMAN KASIR: Jika waktu habis tapi kasir sedang membuka kotak TV ini, 
+                // tahan proses auto-checkout agar kasir bisa nambah waktu dengan tenang.
+                if (tvTerpilih === tv.id && document.getElementById('modal-aktif').style.display === 'flex') {
+                    return; 
+                }
+
                 adaYangHabis = true;
                 prosesCheckout(tv, true);
             }
@@ -262,16 +273,14 @@ function hitungSisaWaktu(endTime) {
 }
 
 // ==========================================
-// REFACTORING 2: RENDER TAMPILAN DOM DIFFING
+// RENDER TAMPILAN DOM DIFFING
 // ==========================================
 function renderTampilan(tvData) {
     if(!document.getElementById('app')) return;
 
-    // Update Header Stats
     let aktifCount = 0, tersediaCount = 0;
     tvData.forEach(tv => { if(tv.is_active) aktifCount++; else tersediaCount++; });
 
-    // PERBAIKAN: DOM Diffing untuk Header Stats agar tidak loncat saat hover
     let statsContainer = document.getElementById('header-stats-container');
     let htmlStatsBaru = `
         <div class="h-stat merah"><span style="font-size:14px;">🎮</span> ${aktifCount} Main</div>
@@ -286,7 +295,6 @@ function renderTampilan(tvData) {
     let appContainer = document.getElementById('app');
     let gridContainer = document.getElementById('tv-grid-container');
 
-    // INISIALISASI DOM: Hanya membuat kerangka kotak TV satu kali saja
     if (!gridContainer) {
         appContainer.innerHTML = '<div class="grid-container" id="tv-grid-container"></div>';
         gridContainer = document.getElementById('tv-grid-container');
@@ -305,7 +313,6 @@ function renderTampilan(tvData) {
         gridContainer.innerHTML = htmlBoxes;
     }
 
-    // UPDATE DOM: Hanya mengubah value teks/class tanpa menghancurkan elemen kotak
     tvData.forEach(tv => {
         const box = document.getElementById(`tv-box-${tv.id}`);
         const statusTeks = document.getElementById(`tv-status-teks-${tv.id}`);
@@ -314,26 +321,22 @@ function renderTampilan(tvData) {
         const rincian = document.getElementById(`tv-rincian-${tv.id}`);
 
         if (!tv.is_active) {
-            // State: Jika TV sedang Kosong
             if (!box.classList.contains('bg-green')) {
                 box.className = 'tv-box bg-green';
                 box.onclick = () => window.klikTV(tv.id);
             }
         } else {
-            // State: Jika TV sedang Dipakai
             if (!box.classList.contains('bg-red')) {
                 box.className = 'tv-box bg-red';
                 box.onclick = () => window.klikTVAktif(tv.id);
             }
             
-            // Perbarui waktu detiknya (DOM Diffing Ringan)
             let sisa = hitungSisaWaktu(tv.end_time);
             let jamRange = `⏰ ${formatJam(tv.start_time)} - ${formatJam(tv.end_time)}`;
             
             if(jamMain.innerText !== jamRange) jamMain.innerText = jamRange;
             if(countdown.innerText !== sisa) countdown.innerText = sisa;
             
-            // Rincian harga di bawah kotak divalidasi dengan DOM Diffing
             let htmlRincianBaru = `
                 <span>Rental: Rp ${Number(tv.rental_price).toLocaleString('id-ID')}</span>
                 <span>Makanan: Rp ${Number(tv.food_price || 0).toLocaleString('id-ID')}</span>
@@ -527,9 +530,10 @@ window.prosesRental = async function() {
     if (dSelesai > dBatasMalam) dSelesai = dBatasMalam;
 
     const selesaiIso = dSelesai.toISOString();
-    
-    // PERBAIKAN: Menghapus format harga ganda dari atribut data-nama
     let namaPaketFormatted = opt.getAttribute('data-nama');
+
+    // PERBAIKAN: Buka kunci gembok untuk TV ini agar sesi barunya bisa di-checkout otomatis nanti
+    delete blokirAutoCheckout[tvTerpilih];
 
     await supabase.from('tvs').update({ 
         is_active: true, start_time: mulaiIso, end_time: selesaiIso, 
@@ -542,6 +546,14 @@ window.prosesRental = async function() {
 };
 
 window.tambahWaktu = async function() {
+    const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
+    
+    // PERBAIKAN: Jika sedang dicegah nambah karena proses auto-checkout sedang berjalan
+    if (!tv || !tv.is_active || blokirAutoCheckout[tv.id]) {
+        alert("Sesi TV ini sudah berakhir dan sedang diproses sistem. Silakan mulai sesi baru.");
+        return window.tutupModalAktif();
+    }
+
     const sel = document.getElementById('pilihan-tambah-waktu');
     const opt = sel.options[sel.selectedIndex];
     if (!opt.value) return alert("Pilih paket tambahan dulu!");
@@ -550,7 +562,6 @@ window.tambahWaktu = async function() {
     const hargaTambah = parseInt(opt.getAttribute('data-harga')); 
     const namaPaketTambah = opt.getAttribute('data-nama');
     
-    const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
     const hargaRentalBaru = (tv.rental_price || 0) + hargaTambah;
     const namaPaketBaru = tv.current_package_name + " + " + namaPaketTambah;
 
@@ -564,10 +575,12 @@ window.tambahWaktu = async function() {
 
     const selesaiIsoBaru = waktuSelesaiBaru.toISOString();
 
+    // PERBAIKAN: Selalu perbarui is_active ke true sebagai pengaman
     await supabase.from('tvs').update({ 
-        end_time: selesaiIsoBaru, current_package_name: namaPaketBaru, rental_price: hargaRentalBaru 
+        is_active: true, end_time: selesaiIsoBaru, current_package_name: namaPaketBaru, rental_price: hargaRentalBaru 
     }).eq('id', tvTerpilih);
     
+    tv.is_active = true;
     tv.end_time = selesaiIsoBaru;
     tv.current_package_name = namaPaketBaru;
     tv.rental_price = hargaRentalBaru;
@@ -580,6 +593,14 @@ window.tambahWaktu = async function() {
 };
 
 window.tambahMakanan = async function() {
+    const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
+    
+    // PERBAIKAN: Mencegah penambahan jika sedang auto-checkout
+    if (!tv || !tv.is_active || blokirAutoCheckout[tv.id]) {
+        alert("Sesi TV ini sudah berakhir dan sedang diproses sistem.");
+        return window.tutupModalAktif();
+    }
+
     const sel = document.getElementById('pilihan-makanan');
     const opt = sel.options[sel.selectedIndex];
     const hrgSatuan = parseInt(opt.value);
@@ -590,14 +611,17 @@ window.tambahMakanan = async function() {
     if (qty < 1) return alert("Jumlah minimal 1!");
     
     const hrgTotalItem = hrgSatuan * qty; 
-    const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
     const hargaBaru = (tv.food_price || 0) + hrgTotalItem;
     
     let formatItem = `${qty}x ${opt.getAttribute('data-nama')} (Rp ${hrgTotalItem.toLocaleString('id-ID')})`;
     let detailBaru = (tv.food_details && tv.food_details.trim() !== "") ? tv.food_details + "<br>• " + formatItem : "• " + formatItem;
 
-    await supabase.from('tvs').update({ food_price: hargaBaru, food_details: detailBaru }).eq('id', tvTerpilih);
+    // PERBAIKAN: Selalu pastikan is_active true
+    await supabase.from('tvs').update({ 
+        is_active: true, food_price: hargaBaru, food_details: detailBaru 
+    }).eq('id', tvTerpilih);
     
+    tv.is_active = true;
     tv.food_price = hargaBaru;
     tv.food_details = detailBaru;
 
@@ -611,6 +635,8 @@ window.tambahMakanan = async function() {
 
 window.selesaiRental = async function() {
     const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
+    if (!tv || !tv.is_active || blokirAutoCheckout[tv.id]) return window.tutupModalAktif();
+    
     if (!confirm(`Selesaikan sesi TV ${tv.id} lebih cepat dari waktu?`)) return;
     prosesCheckout(tv, false);
     window.tutupModalAktif();
@@ -620,8 +646,11 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
     if (tvSedangDiprosesOtomatis[tv.id]) return; 
     tvSedangDiprosesOtomatis[tv.id] = true;
 
-    // PERBAIKAN: Matikan status aktif di memori lokal detik ini juga (Optimistic Update).
-    // Jadi, fungsi putaran 1 detik berikutnya tidak akan membacanya dan mencegah transaksi ganda.
+    // PERBAIKAN BUG DOUBLE TRANSAKSI:
+    // 1. Kunci permanen agar tidak dieksekusi ulang oleh rutinitasSistem
+    blokirAutoCheckout[tv.id] = true; 
+    
+    // 2. Matikan status aktif detik ini juga secara lokal (Optimistic Update)
     tv.is_active = false; 
 
     if (isAutoAlarm) putarBunyiAlarm();
@@ -652,10 +681,11 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
         }).eq('id', tv.id);
     } catch(e) {
         console.error("Gagal memproses TV:", e);
-        // Kembalikan status jika ternyata gagal tersimpan di database
+        
+        // Kalau gagal total karena internet putus, kembalikan ke semula
         tv.is_active = true; 
+        delete blokirAutoCheckout[tv.id]; 
     } finally {
-        // Beri jeda 2 detik sebelum membuka gembok untuk keamanan ekstra
         setTimeout(() => {
             delete tvSedangDiprosesOtomatis[tv.id];
         }, 2000);
