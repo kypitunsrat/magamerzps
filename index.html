@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MA Gamerz Playstation</title>
+    
+    <!-- Konfigurasi PWA & Favicon -->
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1877f2">
+    <link rel="apple-touch-icon" href="logo.png">
+
+    <!-- Memanggil file style.css yang sudah kita pisahkan -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Tambahan Library Chart.js untuk Grafik -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- HALAMAN LOGIN -->
+    <div id="page-login">
+        <div class="login-box">
+            <img src="logo.png" alt="Logo MA Gamerz" onerror="this.src='https://via.placeholder.com/80/1877f2/ffffff?text=PS'">
+            <h2>Login Owner</h2>
+            <input type="email" id="login-email" class="login-input" placeholder="Masukkan Email Anda">
+            <input type="password" id="login-password" class="login-input" placeholder="Password">
+            <button class="btn btn-mulai" onclick="window.prosesLogin()">Masuk</button>
+        </div>
+    </div>
+
+    <!-- WRAPPER APLIKASI UTAMA -->
+    <div id="main-app-container">
+        
+        <div class="app-header">
+            <!-- Tombol Dark Mode -->
+            <button class="btn-theme-toggle" onclick="window.toggleTheme()" id="btn-theme">☀️</button>
+
+            <div class="header-content">
+                <div class="app-header-brand">
+                    <img src="logo.png" alt="Logo" onerror="this.src='https://via.placeholder.com/52/ffffff/1877f2?text=PS'">
+                    <div>
+                        <h2>MA Gamerz Playstation</h2>
+                        <div class="waktu-badge">
+                            <span>📅 <strong id="header-waktu">Memuat waktu...</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-stats" id="header-stats-container"></div>
+            </div>
+        </div>
+
+        <!-- HALAMAN DASHBOARD UTAMA -->
+        <div id="page-dashboard" class="page active">
+            <div id="app">Memuat data TV...</div>
+            
+            <div class="dashboard-action-bar">
+                <button class="btn-action-main btn-masuk" onclick="window.bukaModalPemasukan()">➕ Kas Masuk / Genapin Saldo</button>
+                <button class="btn-action-main btn-keluar" onclick="window.bukaModalPengeluaran()">📉 Catat Pengeluaran</button>
+            </div>
+        </div>
+
+        <!-- HALAMAN LAPORAN -->
+        <div id="page-laporan" class="page">
+            <div class="filter-btn-group">
+                <button class="filter-btn active" onclick="window.ubahFilterLaporan('harian', this)">Hari Ini</button>
+                <button class="filter-btn" onclick="window.ubahFilterLaporan('kemarin', this)">Kemarin</button>
+                <button class="filter-btn" onclick="window.ubahFilterLaporan('mingguan', this)">Mingguan</button>
+                <button class="filter-btn" onclick="window.ubahFilterLaporan('bulanan', this)">Bulan & Kalender</button>
+                <button class="filter-btn" onclick="window.ubahFilterLaporan('semua', this)">Semua Waktu</button>
+            </div>
+
+            <div class="card-laporan" style="padding-bottom: 0; overflow: hidden;">
+                <h3 id="label-laporan">Total Pendapatan (Kotor / Bruto)</h3>
+                <p class="total-utama" id="lap-total-kotor">Rp 0</p>
+                
+                <div class="split-laporan">
+                    <div class="split-item">
+                        <span>🎮 Sewa Rental</span>
+                        <strong id="lap-rental">Rp 0</strong>
+                    </div>
+                    <div class="split-item">
+                        <span>🍜 Makanan</span>
+                        <strong id="lap-makanan">Rp 0</strong>
+                    </div>
+                    <div class="split-item" style="border-left: 3px solid #10b981;">
+                        <span>➕ Kas Masuk</span>
+                        <strong id="lap-pemasukan" style="color: #10b981;">Rp 0</strong>
+                    </div>
+                    <div class="split-item" style="border-left: 3px solid #ef4444;">
+                        <span>🔴 Pengeluaran</span>
+                        <strong id="lap-pengeluaran" style="color: #ef4444;">Rp 0</strong>
+                    </div>
+                </div>
+
+                <div class="total-bersih-box">
+                    <h3>TOTAL PENDAPATAN BERSIH (NETTO)</h3>
+                    <p id="lap-total-bersih">Rp 0</p>
+                </div>
+            </div>
+
+            <div class="card-laporan" id="box-grafik" style="display: none;">
+                <h3 id="label-grafik">Grafik Pendapatan Bersih</h3>
+                <div class="chart-container">
+                    <canvas id="laporanChart"></canvas>
+                </div>
+            </div>
+
+            <div id="box-nav-mingguan" class="kalender-container" style="display: none;">
+                <div class="kalender-nav" style="margin-bottom: 0;">
+                    <button onclick="window.geserMinggu(-1)">&#9664; Minggu Lalu</button>
+                    <span id="label-rentang-minggu" style="font-weight: 700; font-size: 13px; color: var(--text-heading);">Memuat...</span>
+                    <button onclick="window.geserMinggu(1)">Minggu Depan &#9654;</button>
+                </div>
+            </div>
+
+            <div id="box-kalender" class="kalender-container">
+                <div class="kalender-nav">
+                    <button onclick="window.geserBulan(-1)">&#9664; Bulan Lalu</button>
+                    <span id="label-bulan-tahun" style="font-weight: 700; font-size: 14px; color: var(--text-heading);">Agustus 2026</span>
+                    <button onclick="window.geserBulan(1)">Bulan Depan &#9654;</button>
+                </div>
+                <div class="kalender-grid" style="margin-top: 15px;">
+                    <div class="kalender-header-hari">Min</div>
+                    <div class="kalender-header-hari">Sen</div>
+                    <div class="kalender-header-hari">Sel</div>
+                    <div class="kalender-header-hari">Rab</div>
+                    <div class="kalender-header-hari">Kam</div>
+                    <div class="kalender-header-hari">Jum</div>
+                    <div class="kalender-header-hari">Sab</div>
+                </div>
+                <div id="grid-tanggal-kalender" class="kalender-grid" style="margin-top: 6px;"></div>
+            </div>
+
+            <div class="card-laporan">
+                <h3 id="judul-riwayat">Daftar Riwayat Transaksi</h3>
+                <div id="list-riwayat" class="list-riwayat">
+                    <p style="color: var(--text-muted); font-size:13px; text-align:center;">Memuat riwayat...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- HALAMAN PENGATURAN / KUSTOMISASI -->
+        <div id="page-pengaturan" class="page">
+            <div class="setting-card">
+                <h4>⚡ Pengaturan Paket Rental</h4>
+                <div id="list-pengaturan-paket">Memuat paket...</div>
+                <button class="btn" style="background:#1877f2; margin-top:10px;" id="btn-tambah-paket-baru">+ Tambah Paket Baru</button>
+            </div>
+
+            <div class="setting-card">
+                <h4>🍜 Pengaturan Menu Makanan</h4>
+                <div id="list-pengaturan-makanan">Memuat menu...</div>
+                <button class="btn" style="background:#1877f2; margin-top:10px;" id="btn-tambah-makanan-baru">+ Tambah Menu Baru</button>
+            </div>
+
+            <div class="setting-card" style="border-color: var(--border-color); background: var(--bg-item);">
+                <h4 style="color: var(--text-heading);">🔒 Keamanan Akun</h4>
+                <button class="btn" style="background: #3b82f6; margin-bottom: 10px;" onclick="window.bukaModalUbahPassword()">Ubah Password</button>
+                <button class="btn btn-selesai" style="margin-top: 0; background: #ef4444;" onclick="window.prosesLogout()">Keluar Aplikasi (Logout)</button>
+            </div>
+        </div>
+
+        <!-- NAVIGASI BAWAH -->
+        <div class="bottom-nav">
+            <div class="nav-item active" id="nav-dashboard" onclick="window.pindahTab('dashboard')"><span class="nav-icon">🎮</span> Dashboard</div>
+            <div class="nav-item" id="nav-laporan" onclick="window.pindahTab('laporan')"><span class="nav-icon">📊</span> Laporan</div>
+            <div class="nav-item" id="nav-pengaturan" onclick="window.pindahTab('pengaturan')"><span class="nav-icon">⚙️</span> Pengaturan</div>
+        </div>
+    </div>
+
+    <!-- MODAL MULAI RENTAL -->
+    <div id="modal-rental" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 15px 0;">Mulai Sesi TV <span id="modal-tv-id"></span></h3>
+            <span class="label-input">Jam Mulai (WITA):</span>
+            <input type="time" id="input-jam-mulai">
+            <span class="label-input">Pilih Paket Awal:</span>
+            <select id="pilihan-paket"></select>
+            <div class="btn-group">
+                <button class="btn btn-batal" onclick="window.tutupModal()">Batal</button>
+                <button class="btn btn-mulai" onclick="window.prosesRental()">Mulai Sesi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL KELOLA TV AKTIF -->
+    <div id="modal-aktif" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 5px 0;">Kelola TV <span id="aktif-tv-id"></span></h3>
+            <p id="info-status-main" style="margin: 0 0 15px 0; color: var(--text-muted); font-size: 14px; font-weight: 600;"></p>
+            
+            <div id="box-history-aktif" style="background: var(--bg-item); border: 1px solid var(--border-color); padding: 12px; border-radius: 12px; margin-bottom: 15px; font-size: 13px; color: var(--text-main);">
+                <div style="margin-bottom: 10px;">
+                    <div style="font-weight: 700; color: var(--text-heading); margin-bottom: 4px;">📦 Riwayat Paket:</div>
+                    <ul id="list-history-paket" style="margin: 0; padding-left: 18px; color: var(--text-muted);"><li>-</li></ul>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <div style="font-weight: 700; color: var(--text-heading); margin-bottom: 4px;">🍜 Riwayat Makanan:</div>
+                    <ul id="list-history-makanan" style="margin: 0; padding-left: 18px; color: var(--text-muted);"><li>Belum ada pesanan</li></ul>
+                </div>
+                <div style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 8px; font-weight: 700; color: #1877f2; display: flex; justify-content: space-between;">
+                    <span>Total Tagihan Sementara:</span>
+                    <span id="teks-total-aktif">Rp 0</span>
+                </div>
+            </div>
+
+            <span class="label-input">Perpanjang / Tambah Billing:</span>
+            <select id="pilihan-tambah-waktu"></select>
+            <button class="btn btn-tambah-waktu" onclick="window.tambahWaktu()">+ Tambah Waktu Main</button>
+            
+            <hr class="pemisah">
+
+            <span class="label-input">Beli Makanan / Minuman:</span>
+            <select id="pilihan-makanan"></select>
+            <button class="btn btn-makanan" onclick="window.tambahMakanan()">+ Catat Pembelian Makanan</button>
+            
+            <div class="btn-group">
+                <button class="btn btn-batal" onclick="window.tutupModalAktif()">Tutup</button>
+                <button class="btn btn-selesai" onclick="window.selesaiRental()">Akhiri Sesi Cepat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PEMASUKAN LAIN (SUNTIKAN DANA) -->
+    <div id="modal-pemasukan" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 15px 0;">➕ Kas Masuk / Lainnya</h3>
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <span class="label-input">Pilih Tanggal:</span>
+                    <input type="date" id="input-tgl-pemasukan">
+                </div>
+                <div style="flex: 1;">
+                    <span class="label-input">Jam (WITA):</span>
+                    <input type="time" id="input-jam-pemasukan">
+                </div>
+            </div>
+            
+            <span class="label-input">Kategori Pemasukan:</span>
+            <select id="pilihan-kategori-pemasukan" onchange="window.ubahKategoriPemasukan()">
+                <option value="Tukar DANA">Tukar DANA</option>
+                <option value="Genapin Saldo">Genapin Saldo (Suntikan Dana)</option>
+            </select>
+            
+            <span class="label-input">Pilih Nominal Cepat:</span>
+            <div class="nominal-grid" id="grid-nominal-pemasukan"></div>
+
+            <span class="label-input">Atau Ketik Nominal Bebas (Rp):</span>
+            <input type="number" id="input-nominal-pemasukan" placeholder="Ketik nominal di sini...">
+            
+            <div class="btn-group">
+                <button class="btn btn-batal" onclick="window.tutupModalPemasukan()">Batal</button>
+                <button class="btn btn-mulai" style="background:#1877f2;" onclick="window.prosesSimpanPemasukan()">Simpan Pemasukan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PENGELUARAN -->
+    <div id="modal-pengeluaran" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 15px 0;">📉 Catat Pengeluaran</h3>
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <span class="label-input">Pilih Tanggal:</span>
+                    <input type="date" id="input-tgl-pengeluaran">
+                </div>
+                <div style="flex: 1;">
+                    <span class="label-input">Jam (WITA):</span>
+                    <input type="time" id="input-jam-pengeluaran">
+                </div>
+            </div>
+            
+            <span class="label-input">Kategori Pengeluaran:</span>
+            <select id="pilihan-kategori-pengeluaran" onchange="window.ubahKategoriPengeluaran()">
+                <option value="Operasional Rental">Operasional Rental (Listrik/Air/Internet)</option>
+                <option value="Restok Makanan/Minuman">Restok Makanan & Minuman</option>
+                <option value="Lainnya">Lainnya (Ketik Manual)</option>
+            </select>
+            
+            <input type="text" id="input-ket-pengeluaran" style="display:none;" placeholder="Tuliskan keterangan pengeluaran...">
+            
+            <span class="label-input">Pilih Nominal Cepat:</span>
+            <div class="nominal-grid">
+                <button type="button" class="btn-nominal" onclick="window.pilihNominalPengeluaran(20000, this)">20.000</button>
+                <button type="button" class="btn-nominal" onclick="window.pilihNominalPengeluaran(50000, this)">50.000</button>
+                <button type="button" class="btn-nominal" onclick="window.pilihNominalPengeluaran(100000, this)">100.000</button>
+                <button type="button" class="btn-nominal" onclick="window.pilihNominalPengeluaran(200000, this)">200.000</button>
+            </div>
+
+            <span class="label-input">Atau Ketik Nominal Bebas (Rp):</span>
+            <input type="number" id="input-nominal-pengeluaran" placeholder="Ketik nominal di sini...">
+            
+            <div class="btn-group">
+                <button class="btn btn-batal" onclick="window.tutupModalPengeluaran()">Batal</button>
+                <button class="btn btn-mulai" style="background:#ef4444;" onclick="window.prosesSimpanPengeluaran()">Simpan Pengeluaran</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL UBAH PASSWORD -->
+    <div id="modal-ubah-password" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 15px 0;">Ubah Password</h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Masukkan password baru Anda di bawah ini.</p>
+            <span class="label-input">Password Baru:</span>
+            <input type="password" id="input-pass-baru" placeholder="Minimal 6 karakter">
+            <span class="label-input">Ulangi Password Baru:</span>
+            <input type="password" id="input-pass-konfirm" placeholder="Ketik ulang password baru">
+            <div class="btn-group">
+                <button class="btn btn-batal" onclick="window.tutupModalUbahPassword()">Batal</button>
+                <button class="btn btn-mulai" onclick="window.simpanPasswordBaru()">Simpan Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TAMBAH/EDIT PAKET -->
+    <div id="modal-tambah-paket" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="judul-modal-paket">Tambah Paket Rental</h3>
+            <input type="hidden" id="edit-paket-id">
+            <span class="label-input">Nama Paket / Layanan:</span>
+            <input type="text" id="add-paket-nama" placeholder="Contoh: 1 Jam atau + 1 Stick">
+            <span class="label-input">Durasi (Menit): <small style="color: var(--text-muted); font-weight: normal;">Isi 0 khusus untuk Tambah Stick</small></span>
+            <input type="number" id="add-paket-durasi" placeholder="Contoh: 60">
+            <span class="label-input">Harga (Rp):</span>
+            <input type="number" id="add-paket-harga" placeholder="Contoh: 10000">
+            <div class="btn-group">
+                <button class="btn btn-batal" id="btn-batal-paket" type="button">Batal</button>
+                <button class="btn btn-mulai" id="btn-simpan-paket" type="button">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TAMBAH/EDIT MAKANAN -->
+    <div id="modal-tambah-makanan" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="judul-modal-makanan">Tambah Menu Makanan</h3>
+            <input type="hidden" id="edit-makanan-id">
+            <span class="label-input">Nama Makanan / Minuman:</span>
+            <input type="text" id="add-makanan-nama" placeholder="Contoh: Indomie Double">
+            <span class="label-input">Harga (Rp):</span>
+            <input type="number" id="add-makanan-harga" placeholder="Contoh: 12000">
+            <div class="btn-group">
+                <button class="btn btn-batal" id="btn-batal-makanan" type="button">Batal</button>
+                <button class="btn btn-mulai" id="btn-simpan-makanan" type="button">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Memanggil file app.js yang sudah kita pisahkan -->
+    <script type="module" src="magamerz.js"></script>
+
+</body>
+</html>
