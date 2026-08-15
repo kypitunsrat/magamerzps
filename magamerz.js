@@ -14,7 +14,7 @@ let kalenderBulanAktif = new Date().getMonth();
 let offsetMingguan = 0; 
 
 let tvSedangDiprosesOtomatis = {}; 
-let blokirAutoCheckout = {}; // PERBAIKAN: Kunci gembok anti-dobel transaksi
+let blokirAutoCheckout = {}; 
 let intervalTimerApp = null; 
 let myChartInstance = null;
 
@@ -223,12 +223,8 @@ function rutinitasSistem() {
         let adaYangHabis = false;
         dataTVGlobal.forEach(tv => {
             if (tv.is_active && tv.end_time && new Date(tv.end_time).getTime() <= getWaktuAsli().getTime()) {
-                
-                // PERBAIKAN: Jika TV ini sedang terblokir (sedang checkout/sudah checkout), lewati!
                 if (blokirAutoCheckout[tv.id]) return; 
 
-                // ZONA AMAN KASIR: Jika waktu habis tapi kasir sedang membuka kotak TV ini, 
-                // tahan proses auto-checkout agar kasir bisa nambah waktu dengan tenang.
                 if (tvTerpilih === tv.id && document.getElementById('modal-aktif').style.display === 'flex') {
                     return; 
                 }
@@ -532,7 +528,6 @@ window.prosesRental = async function() {
     const selesaiIso = dSelesai.toISOString();
     let namaPaketFormatted = opt.getAttribute('data-nama');
 
-    // PERBAIKAN: Buka kunci gembok untuk TV ini agar sesi barunya bisa di-checkout otomatis nanti
     delete blokirAutoCheckout[tvTerpilih];
 
     await supabase.from('tvs').update({ 
@@ -548,7 +543,6 @@ window.prosesRental = async function() {
 window.tambahWaktu = async function() {
     const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
     
-    // PERBAIKAN: Jika sedang dicegah nambah karena proses auto-checkout sedang berjalan
     if (!tv || !tv.is_active || blokirAutoCheckout[tv.id]) {
         alert("Sesi TV ini sudah berakhir dan sedang diproses sistem. Silakan mulai sesi baru.");
         return window.tutupModalAktif();
@@ -575,7 +569,6 @@ window.tambahWaktu = async function() {
 
     const selesaiIsoBaru = waktuSelesaiBaru.toISOString();
 
-    // PERBAIKAN: Selalu perbarui is_active ke true sebagai pengaman
     await supabase.from('tvs').update({ 
         is_active: true, end_time: selesaiIsoBaru, current_package_name: namaPaketBaru, rental_price: hargaRentalBaru 
     }).eq('id', tvTerpilih);
@@ -595,7 +588,6 @@ window.tambahWaktu = async function() {
 window.tambahMakanan = async function() {
     const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
     
-    // PERBAIKAN: Mencegah penambahan jika sedang auto-checkout
     if (!tv || !tv.is_active || blokirAutoCheckout[tv.id]) {
         alert("Sesi TV ini sudah berakhir dan sedang diproses sistem.");
         return window.tutupModalAktif();
@@ -616,7 +608,6 @@ window.tambahMakanan = async function() {
     let formatItem = `${qty}x ${opt.getAttribute('data-nama')} (Rp ${hrgTotalItem.toLocaleString('id-ID')})`;
     let detailBaru = (tv.food_details && tv.food_details.trim() !== "") ? tv.food_details + "<br>• " + formatItem : "• " + formatItem;
 
-    // PERBAIKAN: Selalu pastikan is_active true
     await supabase.from('tvs').update({ 
         is_active: true, food_price: hargaBaru, food_details: detailBaru 
     }).eq('id', tvTerpilih);
@@ -646,18 +637,21 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
     if (tvSedangDiprosesOtomatis[tv.id]) return; 
     tvSedangDiprosesOtomatis[tv.id] = true;
 
-    // PERBAIKAN BUG DOUBLE TRANSAKSI:
-    // 1. Kunci permanen agar tidak dieksekusi ulang oleh rutinitasSistem
     blokirAutoCheckout[tv.id] = true; 
-    
-    // 2. Matikan status aktif detik ini juga secara lokal (Optimistic Update)
     tv.is_active = false; 
 
     if (isAutoAlarm) putarBunyiAlarm();
 
     const tot = (tv.rental_price || 0) + (tv.food_price || 0);
     try {
-        const waktuSelesaiIso = getWaktuAsli().toISOString();
+        // PERBAIKAN: Menangkal Efek PC Sleep / Minimize
+        let waktuSelesaiIso = getWaktuAsli().toISOString();
+        
+        // Cek jika eksekusi ini ternyata SUDAH MELEWATI jadwal end_time (biasanya karna laptop tertidur),
+        // maka paksa gunakan jadwal end_time yang seharusnya agar tidak nyasar ke jam atau hari berikutnya.
+        if (tv.end_time && new Date(waktuSelesaiIso).getTime() > new Date(tv.end_time).getTime()) {
+            waktuSelesaiIso = tv.end_time;
+        }
 
         let rincianPaket = tv.current_package_name ? `<span style="color: #0284c7; font-style: normal; font-weight: 600;">🎮 ${tv.current_package_name}</span>` : '';
         let rincianMakanan = tv.food_details || '';
@@ -682,7 +676,6 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
     } catch(e) {
         console.error("Gagal memproses TV:", e);
         
-        // Kalau gagal total karena internet putus, kembalikan ke semula
         tv.is_active = true; 
         delete blokirAutoCheckout[tv.id]; 
     } finally {
