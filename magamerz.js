@@ -311,6 +311,7 @@ function renderTampilan(tvData) {
 
     tvData.forEach(tv => {
         const box = document.getElementById(`tv-box-${tv.id}`);
+        const statusTeks = document.getElementById(`tv-status-teks-${tv.id}`);
         const jamMain = document.getElementById(`tv-jam-${tv.id}`);
         const countdown = document.getElementById(`tv-countdown-${tv.id}`);
         const rincian = document.getElementById(`tv-rincian-${tv.id}`);
@@ -345,7 +346,7 @@ function renderTampilan(tvData) {
 }
 
 // ==========================================
-// TRANSAKSI & MODAL
+// TRANSAKSI & MODAL (DENGAN DETEKTOR ERROR KETAT)
 // ==========================================
 
 window.klikTV = function(id) {
@@ -422,6 +423,7 @@ window.pilihNominalPemasukan = function(nilai, btn) {
     document.getElementById('input-nominal-pemasukan').value = nilai;
 };
 
+// FIX: Tambah Detektor Error
 window.prosesSimpanPemasukan = async function() {
     const tgl = document.getElementById('input-tgl-pemasukan').value;
     const jam = document.getElementById('input-jam-pemasukan').value;
@@ -432,15 +434,19 @@ window.prosesSimpanPemasukan = async function() {
     const waktuTrxIso = new Date(`${tgl}T${jam}:00+08:00`).toISOString();
 
     try {
-        await supabase.from('transactions').insert([{ 
+        const { error } = await supabase.from('transactions').insert([{ 
             tv_id: 0, rental_price: 0, food_price: 0, total_price: nominal, 
             food_details: `🟢 Pemasukan Lain: ${kategori}`, start_time: null, created_at: waktuTrxIso 
         }]);
+        
+        if (error) throw error; // Tembok pengaman internet
+
         window.tutupModalPemasukan();
         jalankanAplikasi();
         alert("Pemasukan berhasil dicatat!");
     } catch(e) {
-        alert("Gagal menyimpan transaksi."); console.error(e);
+        alert("Gagal menyimpan transaksi! Pastikan internet Tablet stabil.");
+        console.error(e);
     }
 };
 
@@ -479,6 +485,7 @@ window.pilihNominalPengeluaran = function(nilai, btn) {
     document.getElementById('input-nominal-pengeluaran').value = nilai;
 };
 
+// FIX: Tambah Detektor Error
 window.prosesSimpanPengeluaran = async function() {
     const tgl = document.getElementById('input-tgl-pengeluaran').value;
     const jam = document.getElementById('input-jam-pengeluaran').value;
@@ -495,18 +502,23 @@ window.prosesSimpanPengeluaran = async function() {
     const waktuTrxIso = new Date(`${tgl}T${jam}:00+08:00`).toISOString();
 
     try {
-        await supabase.from('transactions').insert([{ 
+        const { error } = await supabase.from('transactions').insert([{ 
             tv_id: 0, rental_price: 0, food_price: 0, total_price: nominalMinus, 
             food_details: `🔴 Pengeluaran: ${finalKet}`, start_time: null, created_at: waktuTrxIso 
         }]);
+        
+        if (error) throw error; // Tembok pengaman internet
+
         window.tutupModalPengeluaran();
         jalankanAplikasi();
         alert("Pengeluaran berhasil dicatat!");
     } catch(e) {
-        alert("Gagal menyimpan pengeluaran."); console.error(e);
+        alert("Gagal menyimpan pengeluaran! Pastikan internet Tablet stabil.");
+        console.error(e);
     }
 };
 
+// FIX: Tambah Detektor Error + Anti Ilusi Visual
 window.prosesRental = async function() {
     const sel = document.getElementById('pilihan-paket'); 
     const opt = sel.options[sel.selectedIndex];
@@ -529,16 +541,24 @@ window.prosesRental = async function() {
 
     delete blokirAutoCheckout[tvTerpilih];
 
-    await supabase.from('tvs').update({ 
-        is_active: true, start_time: mulaiIso, end_time: selesaiIso, 
-        current_package_name: namaPaketFormatted, rental_price: parseInt(opt.getAttribute('data-harga')), 
-        food_price: 0, food_details: '' 
-    }).eq('id', tvTerpilih);
-    
-    window.tutupModal(); 
-    jalankanAplikasi();
+    try {
+        const { error } = await supabase.from('tvs').update({ 
+            is_active: true, start_time: mulaiIso, end_time: selesaiIso, 
+            current_package_name: namaPaketFormatted, rental_price: parseInt(opt.getAttribute('data-harga')), 
+            food_price: 0, food_details: '' 
+        }).eq('id', tvTerpilih);
+
+        if (error) throw error; // Kalau internet mati, lari ke catch
+
+        window.tutupModal(); 
+        jalankanAplikasi();
+    } catch (e) {
+        alert("Gagal memulai TV! Periksa koneksi Wi-Fi/Data di Tablet Anda.");
+        console.error(e);
+    }
 };
 
+// FIX: Tambah Detektor Error + Anti Ilusi Visual
 window.tambahWaktu = async function() {
     const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
     
@@ -568,22 +588,30 @@ window.tambahWaktu = async function() {
 
     const selesaiIsoBaru = waktuSelesaiBaru.toISOString();
 
-    await supabase.from('tvs').update({ 
-        is_active: true, end_time: selesaiIsoBaru, current_package_name: namaPaketBaru, rental_price: hargaRentalBaru 
-    }).eq('id', tvTerpilih);
-    
-    tv.is_active = true;
-    tv.end_time = selesaiIsoBaru;
-    tv.current_package_name = namaPaketBaru;
-    tv.rental_price = hargaRentalBaru;
+    try {
+        const { error } = await supabase.from('tvs').update({ 
+            is_active: true, end_time: selesaiIsoBaru, current_package_name: namaPaketBaru, rental_price: hargaRentalBaru 
+        }).eq('id', tvTerpilih);
 
-    document.getElementById('list-history-paket').innerHTML = namaPaketBaru.split('+').map(p => `<li>${p.trim()}</li>`).join('');
-    document.getElementById('teks-total-aktif').innerText = `Rp ${(hargaRentalBaru + (tv.food_price || 0)).toLocaleString('id-ID')}`;
+        if (error) throw error; // Kalau gagal, tidak akan mengubah tampilan lokal
 
-    sel.selectedIndex = 0; 
-    jalankanAplikasi();
+        // Update tampilan lokal jika BENAR-BENAR sukses
+        tv.is_active = true;
+        tv.end_time = selesaiIsoBaru;
+        tv.current_package_name = namaPaketBaru;
+        tv.rental_price = hargaRentalBaru;
+
+        document.getElementById('list-history-paket').innerHTML = namaPaketBaru.split('+').map(p => `<li>${p.trim()}</li>`).join('');
+        document.getElementById('teks-total-aktif').innerText = `Rp ${(hargaRentalBaru + (tv.food_price || 0)).toLocaleString('id-ID')}`;
+
+        sel.selectedIndex = 0; 
+        jalankanAplikasi();
+    } catch (e) {
+        alert("Gagal menambah waktu! Periksa koneksi internet Anda.");
+    }
 };
 
+// FIX: Tambah Detektor Error + Anti Ilusi Visual
 window.tambahMakanan = async function() {
     const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
     
@@ -607,20 +635,27 @@ window.tambahMakanan = async function() {
     let formatItem = `${qty}x ${opt.getAttribute('data-nama')} (Rp ${hrgTotalItem.toLocaleString('id-ID')})`;
     let detailBaru = (tv.food_details && tv.food_details.trim() !== "") ? tv.food_details + "<br>• " + formatItem : "• " + formatItem;
 
-    await supabase.from('tvs').update({ 
-        is_active: true, food_price: hargaBaru, food_details: detailBaru 
-    }).eq('id', tvTerpilih);
-    
-    tv.is_active = true;
-    tv.food_price = hargaBaru;
-    tv.food_details = detailBaru;
+    try {
+        const { error } = await supabase.from('tvs').update({ 
+            is_active: true, food_price: hargaBaru, food_details: detailBaru 
+        }).eq('id', tvTerpilih);
 
-    document.getElementById('list-history-makanan').innerHTML = detailBaru.split('<br>').map(m => `<li>${m.replace('• ', '')}</li>`).join('');
-    document.getElementById('teks-total-aktif').innerText = `Rp ${(tv.rental_price + hargaBaru).toLocaleString('id-ID')}`;
+        if (error) throw error; // Cegah Ilusi Visual
 
-    sel.selectedIndex = 0; 
-    document.getElementById('input-qty-makanan').value = 1; 
-    jalankanAplikasi();
+        // Update tampilan lokal jika BENAR-BENAR sukses
+        tv.is_active = true;
+        tv.food_price = hargaBaru;
+        tv.food_details = detailBaru;
+
+        document.getElementById('list-history-makanan').innerHTML = detailBaru.split('<br>').map(m => `<li>${m.replace('• ', '')}</li>`).join('');
+        document.getElementById('teks-total-aktif').innerText = `Rp ${(tv.rental_price + hargaBaru).toLocaleString('id-ID')}`;
+
+        sel.selectedIndex = 0; 
+        document.getElementById('input-qty-makanan').value = 1; 
+        jalankanAplikasi();
+    } catch (e) {
+        alert("Gagal menambah pesanan! Periksa koneksi internet Anda.");
+    }
 };
 
 window.selesaiRental = async function() {
@@ -638,7 +673,6 @@ window.selesaiRental = async function() {
     window.tutupModalAktif();
 };
 
-// MODIFIKASI FINAL: Menggunakan Kunci Pengaman Komando Tunggal (.single)
 async function prosesCheckout(tv, isAutoAlarm = false) {
     if (tvSedangDiprosesOtomatis[tv.id]) return; 
     tvSedangDiprosesOtomatis[tv.id] = true;
@@ -1222,6 +1256,23 @@ function renderKalenderBulanan() {
     }
     document.getElementById('grid-tanggal-kalender').innerHTML = kalenderHitunganHtml;
 }
+
+// ==========================================
+// FITUR AUTO-SYNC SAAT TAB KEMBALI AKTIF
+// ==========================================
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        console.log("⚡ Layar aktif kembali! Menyedot data terbaru dari server...");
+        
+        // Panggil fungsi untuk mengambil data TV terbaru secara diam-diam
+        jalankanAplikasi();
+        
+        // Jika sedang berada di tab laporan, muat ulang juga laporannya
+        if(document.getElementById('page-laporan').classList.contains('active')){
+            muatDataLaporan();
+        }
+    }
+});
 
 // ==========================================
 // REGISTRASI SERVICE WORKER UNTUK PWA
