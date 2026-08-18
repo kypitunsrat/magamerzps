@@ -629,6 +629,12 @@ window.selesaiRental = async function() {
     if (!tv || !tv.is_active || blokirAutoCheckout[tv.id]) return window.tutupModalAktif();
     
     if (!confirm(`Selesaikan sesi TV ${tv.id} lebih cepat dari waktu?`)) return;
+    
+    if (blokirAutoCheckout[tv.id]) {
+        alert("Sesi ini baru saja diproses secara otomatis oleh sistem.");
+        return window.tutupModalAktif();
+    }
+
     prosesCheckout(tv, false);
     window.tutupModalAktif();
 };
@@ -638,8 +644,7 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
     tvSedangDiprosesOtomatis[tv.id] = true;
 
     blokirAutoCheckout[tv.id] = true; 
-    tv.is_active = false; 
-
+    
     if (isAutoAlarm) putarBunyiAlarm();
 
     const tot = (tv.rental_price || 0) + (tv.food_price || 0);
@@ -647,8 +652,6 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
         // PERBAIKAN: Menangkal Efek PC Sleep / Minimize
         let waktuSelesaiIso = getWaktuAsli().toISOString();
         
-        // Cek jika eksekusi ini ternyata SUDAH MELEWATI jadwal end_time (biasanya karna laptop tertidur),
-        // maka paksa gunakan jadwal end_time yang seharusnya agar tidak nyasar ke jam atau hari berikutnya.
         if (tv.end_time && new Date(waktuSelesaiIso).getTime() > new Date(tv.end_time).getTime()) {
             waktuSelesaiIso = tv.end_time;
         }
@@ -663,19 +666,39 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
             rincianGabungan = rincianMakanan;
         }
 
+        // --- ATOMIC OPTIMISTIC LOCKING ---
+        // 1. Kita gabungkan pengecekan dan update dalam 1 tembakan langsung!
+        const { data: updateData, error: errUpdateTV } = await supabase
+            .from('tvs')
+            .update({ 
+                is_active: false, start_time: null, end_time: null, current_package_name: null, rental_price: 0, food_price: 0, food_details: '' 
+            })
+            .eq('id', tv.id)
+            .eq('is_active', true) // GEMBOK: Supabase hanya akan mengizinkan update JIKA statusnya saat ini benar-benar masih aktif
+            .select();
+
+        if (errUpdateTV) throw errUpdateTV;
+
+        // 2. CEK BALAPAN: Jika updateData kosong, berarti ada device lain yang mengalahkan kita sekian milidetik yang lalu.
+        if (!updateData || updateData.length === 0) {
+            console.log(`Device lain sudah mematikan TV ${tv.id}. Menghentikan pencatatan ganda.`);
+            tv.is_active = false;
+            return; // Berhenti total di sini. Jangan sentuh tabel transaksi!
+        }
+        // ----------------------------------
+
+        tv.is_active = false; 
+
+        // 3. JIKA MENANG BALAPAN: Lanjut catat riwayat transaksinya
         const { error: errInsert } = await supabase.from('transactions').insert([{ 
             tv_id: tv.id, rental_price: tv.rental_price, food_price: tv.food_price, 
             total_price: tot, food_details: rincianGabungan, start_time: tv.start_time, created_at: waktuSelesaiIso 
         }]);
 
         if (errInsert) throw errInsert;
-        
-        await supabase.from('tvs').update({ 
-            is_active: false, start_time: null, end_time: null, current_package_name: null, rental_price: 0, food_price: 0, food_details: '' 
-        }).eq('id', tv.id);
+
     } catch(e) {
         console.error("Gagal memproses TV:", e);
-        
         tv.is_active = true; 
         delete blokirAutoCheckout[tv.id]; 
     } finally {
