@@ -311,7 +311,6 @@ function renderTampilan(tvData) {
 
     tvData.forEach(tv => {
         const box = document.getElementById(`tv-box-${tv.id}`);
-        const statusTeks = document.getElementById(`tv-status-teks-${tv.id}`);
         const jamMain = document.getElementById(`tv-jam-${tv.id}`);
         const countdown = document.getElementById(`tv-countdown-${tv.id}`);
         const rincian = document.getElementById(`tv-rincian-${tv.id}`);
@@ -639,6 +638,7 @@ window.selesaiRental = async function() {
     window.tutupModalAktif();
 };
 
+// MODIFIKASI FINAL: Menggunakan Kunci Pengaman Komando Tunggal (.single)
 async function prosesCheckout(tv, isAutoAlarm = false) {
     if (tvSedangDiprosesOtomatis[tv.id]) return; 
     tvSedangDiprosesOtomatis[tv.id] = true;
@@ -649,9 +649,31 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
 
     const tot = (tv.rental_price || 0) + (tv.food_price || 0);
     try {
-        // PERBAIKAN: Menangkal Efek PC Sleep / Minimize
-        let waktuSelesaiIso = getWaktuAsli().toISOString();
+        const { data: updatedTv, error: errUpdateTV } = await supabase
+            .from('tvs')
+            .update({ 
+                is_active: false, 
+                start_time: null, 
+                end_time: null, 
+                current_package_name: null, 
+                rental_price: 0, 
+                food_price: 0, 
+                food_details: '' 
+            })
+            .eq('id', tv.id)
+            .eq('is_active', true)
+            .select()
+            .single();
+
+        if (errUpdateTV || !updatedTv) {
+            console.log(`Device lain sudah memproses TV ${tv.id}. Abort insert transaksi.`);
+            tv.is_active = false;
+            return; 
+        }
         
+        tv.is_active = false; 
+
+        let waktuSelesaiIso = getWaktuAsli().toISOString();
         if (tv.end_time && new Date(waktuSelesaiIso).getTime() > new Date(tv.end_time).getTime()) {
             waktuSelesaiIso = tv.end_time;
         }
@@ -666,30 +688,6 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
             rincianGabungan = rincianMakanan;
         }
 
-        // --- ATOMIC OPTIMISTIC LOCKING ---
-        // 1. Kita gabungkan pengecekan dan update dalam 1 tembakan langsung!
-        const { data: updateData, error: errUpdateTV } = await supabase
-            .from('tvs')
-            .update({ 
-                is_active: false, start_time: null, end_time: null, current_package_name: null, rental_price: 0, food_price: 0, food_details: '' 
-            })
-            .eq('id', tv.id)
-            .eq('is_active', true) // GEMBOK: Supabase hanya akan mengizinkan update JIKA statusnya saat ini benar-benar masih aktif
-            .select();
-
-        if (errUpdateTV) throw errUpdateTV;
-
-        // 2. CEK BALAPAN: Jika updateData kosong, berarti ada device lain yang mengalahkan kita sekian milidetik yang lalu.
-        if (!updateData || updateData.length === 0) {
-            console.log(`Device lain sudah mematikan TV ${tv.id}. Menghentikan pencatatan ganda.`);
-            tv.is_active = false;
-            return; // Berhenti total di sini. Jangan sentuh tabel transaksi!
-        }
-        // ----------------------------------
-
-        tv.is_active = false; 
-
-        // 3. JIKA MENANG BALAPAN: Lanjut catat riwayat transaksinya
         const { error: errInsert } = await supabase.from('transactions').insert([{ 
             tv_id: tv.id, rental_price: tv.rental_price, food_price: tv.food_price, 
             total_price: tot, food_details: rincianGabungan, start_time: tv.start_time, created_at: waktuSelesaiIso 
@@ -947,16 +945,16 @@ async function muatDataLaporan() {
 
     } else {
         let tglMulai = new Date();
-        let tglAkhir = new Date();
+        let tglFi = new Date();
         
         if (filterAktif === 'harian') {
             tglMulai.setHours(0,0,0,0);
-            tglAkhir.setHours(23,59,59,999);
+            tglFi.setHours(23,59,59,999);
         } else if (filterAktif === 'kemarin') {
             tglMulai.setDate(tglMulai.getDate() - 1);
             tglMulai.setHours(0,0,0,0);
-            tglAkhir.setDate(tglAkhir.getDate() - 1);
-            tglAkhir.setHours(23,59,59,999);
+            tglFi.setDate(tglFi.getDate() - 1);
+            tglFi.setHours(23,59,59,999);
         } else if (filterAktif === 'mingguan') {
             const hariIni = tglMulai.getDay(); 
             const selisihKeSabtu = (hariIni === 6) ? 0 : hariIni + 1;
@@ -965,23 +963,23 @@ async function muatDataLaporan() {
             tglMulai.setDate(tglMulai.getDate() + (offsetMingguan * 7));
             tglMulai.setHours(0,0,0,0);
             
-            tglAkhir = new Date(tglMulai);
-            tglAkhir.setDate(tglAkhir.getDate() + 6);
-            tglAkhir.setHours(23,59,59,999);
+            tglFi = new Date(tglMulai);
+            tglFi.setDate(tglFi.getDate() + 6);
+            tglFi.setHours(23,59,59,999);
 
             const opsiTgl = { day: 'numeric', month: 'short', year: 'numeric' };
             const labelMulai = tglMulai.toLocaleDateString('id-ID', opsiTgl);
-            const labelAkhir = tglAkhir.toLocaleDateString('id-ID', opsiTgl);
+            const labelAkhir = tglFi.toLocaleDateString('id-ID', opsiTgl);
             document.getElementById('label-rentang-minggu').innerText = `${labelMulai} - ${labelAkhir}`;
         } else if (filterAktif === 'bulanan') {
             tglMulai = new Date(kalenderTahunAktif, kalenderBulanAktif, 1);
             tglMulai.setHours(0,0,0,0);
-            tglAkhir = new Date(kalenderTahunAktif, kalenderBulanAktif + 1, 0);
-            tglAkhir.setHours(23,59,59,999);
+            tglFi = new Date(kalenderTahunAktif, kalenderBulanAktif + 1, 0);
+            tglFi.setHours(23,59,59,999);
         }
 
         const isoMulai = tglMulai.toISOString();
-        const isoAkhir = tglAkhir.toISOString();
+        const isoAkhir = tglFi.toISOString();
 
         const { data } = await supabase.from('transactions')
             .select('*')
