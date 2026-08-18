@@ -423,6 +423,7 @@ window.pilihNominalPemasukan = function(nilai, btn) {
     document.getElementById('input-nominal-pemasukan').value = nilai;
 };
 
+// FIX: Tambah Detektor Error
 window.prosesSimpanPemasukan = async function() {
     const tgl = document.getElementById('input-tgl-pemasukan').value;
     const jam = document.getElementById('input-jam-pemasukan').value;
@@ -438,13 +439,13 @@ window.prosesSimpanPemasukan = async function() {
             food_details: `🟢 Pemasukan Lain: ${kategori}`, start_time: null, created_at: waktuTrxIso 
         }]);
         
-        if (error) throw error; 
+        if (error) throw error; // Tembok pengaman internet
 
         window.tutupModalPemasukan();
         jalankanAplikasi();
         alert("Pemasukan berhasil dicatat!");
     } catch(e) {
-        alert("Gagal menyimpan transaksi! Pastikan internet Tablet stabil.");
+        alert("Gagal menyimpan transaksi! Pastikan internet stabil.");
         console.error(e);
     }
 };
@@ -484,6 +485,7 @@ window.pilihNominalPengeluaran = function(nilai, btn) {
     document.getElementById('input-nominal-pengeluaran').value = nilai;
 };
 
+// FIX: Tambah Detektor Error
 window.prosesSimpanPengeluaran = async function() {
     const tgl = document.getElementById('input-tgl-pengeluaran').value;
     const jam = document.getElementById('input-jam-pengeluaran').value;
@@ -505,7 +507,7 @@ window.prosesSimpanPengeluaran = async function() {
             food_details: `🔴 Pengeluaran: ${finalKet}`, start_time: null, created_at: waktuTrxIso 
         }]);
         
-        if (error) throw error; 
+        if (error) throw error; // Tembok pengaman internet
 
         window.tutupModalPengeluaran();
         jalankanAplikasi();
@@ -516,6 +518,7 @@ window.prosesSimpanPengeluaran = async function() {
     }
 };
 
+// FIX: Tambah Detektor Error + Anti Ilusi Visual
 window.prosesRental = async function() {
     const sel = document.getElementById('pilihan-paket'); 
     const opt = sel.options[sel.selectedIndex];
@@ -545,7 +548,7 @@ window.prosesRental = async function() {
             food_price: 0, food_details: '' 
         }).eq('id', tvTerpilih);
 
-        if (error) throw error; 
+        if (error) throw error; // Kalau internet mati, lari ke catch
 
         window.tutupModal(); 
         jalankanAplikasi();
@@ -555,6 +558,7 @@ window.prosesRental = async function() {
     }
 };
 
+// FIX: Tambah Detektor Error + Anti Ilusi Visual
 window.tambahWaktu = async function() {
     const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
     
@@ -589,8 +593,9 @@ window.tambahWaktu = async function() {
             is_active: true, end_time: selesaiIsoBaru, current_package_name: namaPaketBaru, rental_price: hargaRentalBaru 
         }).eq('id', tvTerpilih);
 
-        if (error) throw error; 
+        if (error) throw error; // Kalau gagal, tidak akan mengubah tampilan lokal
 
+        // Update tampilan lokal jika BENAR-BENAR sukses
         tv.is_active = true;
         tv.end_time = selesaiIsoBaru;
         tv.current_package_name = namaPaketBaru;
@@ -606,6 +611,7 @@ window.tambahWaktu = async function() {
     }
 };
 
+// FIX: Tambah Detektor Error + Anti Ilusi Visual
 window.tambahMakanan = async function() {
     const tv = dataTVGlobal.find(t => t.id === tvTerpilih);
     
@@ -634,8 +640,9 @@ window.tambahMakanan = async function() {
             is_active: true, food_price: hargaBaru, food_details: detailBaru 
         }).eq('id', tvTerpilih);
 
-        if (error) throw error; 
+        if (error) throw error; // Cegah Ilusi Visual
 
+        // Update tampilan lokal jika BENAR-BENAR sukses
         tv.is_active = true;
         tv.food_price = hargaBaru;
         tv.food_details = detailBaru;
@@ -666,9 +673,7 @@ window.selesaiRental = async function() {
     window.tutupModalAktif();
 };
 
-// ==========================================
-// PERBAIKAN FINAL (ANTI MEMORI BASI)
-// ==========================================
+// FIX: Anti Ingatan Basi + Atomic Update
 async function prosesCheckout(tv, isAutoAlarm = false) {
     if (tvSedangDiprosesOtomatis[tv.id]) return; 
     tvSedangDiprosesOtomatis[tv.id] = true;
@@ -678,21 +683,20 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
     if (isAutoAlarm) putarBunyiAlarm();
 
     try {
-        // 1. Tarik Data "Paling Fresh" langsung dari Server (realTv)
-        // Ini memastikan pesanan tambahan dari device lain tidak ikut hilang!
-        const { data: realTv, error: errReal } = await supabase
+        // --- 1. SEDOT DATA TERBARU (ANTI DATA ISTRI HILANG) ---
+        const { data: realTv, error: errCheck } = await supabase
             .from('tvs')
             .select('*')
             .eq('id', tv.id)
             .single();
 
-        if (errReal || !realTv || !realTv.is_active) {
-            console.log(`TV ${tv.id} sudah dimatikan di server. Hentikan eksekusi.`);
+        if (errCheck || !realTv || realTv.is_active === false) {
             tv.is_active = false;
             return; 
         }
+        // ------------------------------------------------------
 
-        // 2. Kunci Atomic Update (Menangkis Spam Klik / Device Ganda)
+        // --- 2. GEMBOK ANTI DOBEL (ATOMIC UPDATE) ---
         const { data: updatedTv, error: errUpdateTV } = await supabase
             .from('tvs')
             .update({ 
@@ -704,22 +708,21 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
                 food_price: 0, 
                 food_details: '' 
             })
-            .eq('id', realTv.id)
+            .eq('id', tv.id)
             .eq('is_active', true)
             .select()
             .single();
 
         if (errUpdateTV || !updatedTv) {
-            console.log(`Device lain keduluan memproses TV ${realTv.id}. Abort.`);
+            console.log(`Device lain sudah memproses TV ${tv.id}. Abort insert transaksi.`);
             tv.is_active = false;
             return; 
         }
+        // ------------------------------------------------------
         
         tv.is_active = false; 
 
-        // 3. Gunakan data FRESH dari realTv untuk semua tagihan & laporan
-        const tot = (realTv.rental_price || 0) + (realTv.food_price || 0);
-
+        // --- 3. CETAK NOTA PAKAI DATA TERBARU (`realTv`) ---
         let waktuSelesaiIso = getWaktuAsli().toISOString();
         if (realTv.end_time && new Date(waktuSelesaiIso).getTime() > new Date(realTv.end_time).getTime()) {
             waktuSelesaiIso = realTv.end_time;
@@ -735,15 +738,11 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
             rincianGabungan = rincianMakanan;
         }
 
-        // 4. Catat transaksi menggunakan data REAL dari server, BUKAN dari ingatan basi Laptop
+        const tot = (realTv.rental_price || 0) + (realTv.food_price || 0);
+
         const { error: errInsert } = await supabase.from('transactions').insert([{ 
-            tv_id: realTv.id, 
-            rental_price: realTv.rental_price, 
-            food_price: realTv.food_price, 
-            total_price: tot, 
-            food_details: rincianGabungan, 
-            start_time: realTv.start_time, 
-            created_at: waktuSelesaiIso 
+            tv_id: realTv.id, rental_price: realTv.rental_price, food_price: realTv.food_price, 
+            total_price: tot, food_details: rincianGabungan, start_time: realTv.start_time, created_at: waktuSelesaiIso 
         }]);
 
         if (errInsert) throw errInsert;
