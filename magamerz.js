@@ -22,9 +22,21 @@ let myChartInstance = null;
 // FUNGSI HELPER (REFACTORING UTILITY)
 // ==========================================
 
+// --- 🚨 PERBAIKAN BARU: OBAT ANTI-BUG SAFARI/iOS 🚨 ---
+// Memastikan semua tanggal dari Supabase dipaksa jadi UTC
+function parseDBDate(str) {
+    if (!str) return null;
+    let finalStr = str;
+    // Jika tidak ada huruf 'Z' dan tidak ada tanda '+' di timezone, paksa tambah 'Z'
+    if (!finalStr.endsWith('Z') && finalStr.indexOf('+') === -1) {
+        finalStr += 'Z';
+    }
+    return new Date(finalStr);
+}
+
 function formatJam(isoString) {
     if(!isoString) return "";
-    return new Date(isoString).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar', hour12: false });
+    return parseDBDate(isoString).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar', hour12: false });
 }
 
 function getWaktuAsli() {
@@ -222,7 +234,8 @@ function rutinitasSistem() {
     if (dataTVGlobal.length > 0) {
         let adaYangHabis = false;
         dataTVGlobal.forEach(tv => {
-            if (tv.is_active && tv.end_time && new Date(tv.end_time).getTime() <= getWaktuAsli().getTime()) {
+            // Gunakan parseDBDate agar iOS tidak salah paham waktu habis
+            if (tv.is_active && tv.end_time && parseDBDate(tv.end_time).getTime() <= getWaktuAsli().getTime()) {
                 if (blokirAutoCheckout[tv.id]) return; 
 
                 if (tvTerpilih === tv.id && document.getElementById('modal-aktif').style.display === 'flex') {
@@ -259,7 +272,8 @@ async function jalankanAplikasi() {
 
 function hitungSisaWaktu(endTime) {
     if (!endTime) return "";
-    const ms = new Date(endTime).getTime() - getWaktuAsli().getTime();
+    // Gunakan parseDBDate
+    const ms = parseDBDate(endTime).getTime() - getWaktuAsli().getTime();
     if (ms <= 0) return "Selesai..."; 
     const d = Math.floor(ms / 1000);
     const j = Math.floor(d / 3600);
@@ -574,7 +588,8 @@ window.tambahWaktu = async function() {
     const hargaRentalBaru = (tv.rental_price || 0) + hargaTambah;
     const namaPaketBaru = tv.current_package_name + " + " + namaPaketTambah;
 
-    let waktuSelesaiLama = new Date(tv.end_time);
+    // Gunakan parseDBDate agar hitungan akurat di semua browser
+    let waktuSelesaiLama = parseDBDate(tv.end_time);
     let waktuSekarang = getWaktuAsli(); 
     let waktuSelesaiBaru = waktuSelesaiLama > waktuSekarang ? new Date(waktuSelesaiLama.getTime() + durasiTambahMenit * 60000) : new Date(waktuSekarang.getTime() + durasiTambahMenit * 60000);
 
@@ -667,7 +682,7 @@ window.selesaiRental = async function() {
 };
 
 // ==========================================
-// PERBAIKAN FINAL (ANTI SALAH SASARAN)
+// PERBAIKAN FINAL (ANTI SALAH SASARAN & ANTI SAFARI BUG)
 // ==========================================
 async function prosesCheckout(tv, isAutoAlarm = false) {
     if (tvSedangDiprosesOtomatis[tv.id]) return; 
@@ -689,28 +704,29 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
             return; 
         }
 
-        // --- 🚨 PERTAHANAN BARU: CEK IDENTITAS SESI (ANTI SALAH SASARAN) 🚨 ---
-        // Jika start_time di HP berbeda dengan start_time di Server, 
-        // artinya HP pakai data basi dan sedang mencoba mematikan sesi pelanggan BARU!
-        if (tv.start_time !== realTv.start_time) {
+        // --- 🚨 PERTAHANAN BARU: CEK IDENTITAS SESI (DENGAN PARSE AMAN) 🚨 ---
+        // Rubah perbandingan string menjadi perbandingan angka absolut (getTime)
+        const waktuStartLokal = parseDBDate(tv.start_time).getTime();
+        const waktuStartServer = parseDBDate(realTv.start_time).getTime();
+        
+        if (waktuStartLokal !== waktuStartServer) {
             console.log(`Mencegah pembunuhan sesi baru! Data HP basi untuk TV ${tv.id}.`);
             jalankanAplikasi(); // Sinkronkan UI secara diam-diam
             return; // Batalkan proses checkout!
         }
 
-        // --- 🚨 PERTAHANAN ALARM 🚨 ---
-        // Bunyikan alarm HANYA JIKA waktu di server BENAR-BENAR sudah habis.
+        // --- 🚨 PERTAHANAN ALARM (DENGAN PARSE AMAN) 🚨 ---
         if (isAutoAlarm) {
-            if (realTv.end_time && new Date(realTv.end_time).getTime() > getWaktuAsli().getTime()) {
+            if (realTv.end_time && parseDBDate(realTv.end_time).getTime() > getWaktuAsli().getTime()) {
                 console.log(`Waktu TV ${tv.id} di server ternyata masih ada. Batal auto-checkout.`);
                 jalankanAplikasi();
                 return;
             }
-            putarBunyiAlarm(); // Aman, waktunya memang sudah habis!
+            putarBunyiAlarm(); 
         }
         // ----------------------------------------------------------------------
 
-        // 2. Kunci Atomic Update (Menangkis Spam Klik / Device Ganda)
+        // 2. Kunci Atomic Update 
         const { data: updatedTv, error: errUpdateTV } = await supabase
             .from('tvs')
             .update({ 
@@ -739,8 +755,8 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
         const tot = (realTv.rental_price || 0) + (realTv.food_price || 0);
 
         let waktuSelesaiIso = getWaktuAsli().toISOString();
-        if (realTv.end_time && new Date(waktuSelesaiIso).getTime() > new Date(realTv.end_time).getTime()) {
-            waktuSelesaiIso = realTv.end_time;
+        if (realTv.end_time && new Date(waktuSelesaiIso).getTime() > parseDBDate(realTv.end_time).getTime()) {
+            waktuSelesaiIso = parseDBDate(realTv.end_time).toISOString();
         }
 
         let rincianPaket = realTv.current_package_name ? `<span style="color: #0284c7; font-style: normal; font-weight: 600;">🎮 ${realTv.current_package_name}</span>` : '';
@@ -753,7 +769,7 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
             rincianGabungan = rincianMakanan;
         }
 
-        // 4. Catat transaksi menggunakan data REAL dari server
+        // 4. Catat transaksi
         const { error: errInsert } = await supabase.from('transactions').insert([{ 
             tv_id: realTv.id, 
             rental_price: realTv.rental_price, 
@@ -1151,7 +1167,7 @@ function terapkanFilterLaporan() {
     let dataValidUntukDihitung = [];
 
     dataTransaksi.forEach(t => {
-        const tglTrx = new Date(t.created_at);
+        const tglTrx = parseDBDate(t.created_at);
         const tglTrxWITA = tglTrx.toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
         
         let masukFilter = true;
@@ -1261,7 +1277,7 @@ function renderKalenderBulanan() {
 
     let pendapatanPerHari = {};
     dataTransaksi.forEach(t => {
-        let d = new Date(t.created_at);
+        let d = parseDBDate(t.created_at);
         if (d.getFullYear() === tahun && d.getMonth() === bulan) {
             let tglKey = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
             pendapatanPerHari[tglKey] = (pendapatanPerHari[tglKey] || 0) + t.total_price;
@@ -1297,19 +1313,23 @@ function renderKalenderBulanan() {
 // ==========================================
 // FITUR AUTO-SYNC SAAT TAB KEMBALI AKTIF
 // ==========================================
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-        console.log("⚡ Layar aktif kembali! Menyedot data terbaru dari server...");
-        
-        // Panggil fungsi untuk mengambil data TV terbaru secara diam-diam
+let terakhirRefresh = 0;
+function refreshDataOtomatis() {
+    const sekarang = Date.now();
+    if (sekarang - terakhirRefresh > 2000) {
+        terakhirRefresh = sekarang;
+        console.log("⚡ Layar HP aktif kembali! Menyedot data terbaru dari server...");
         jalankanAplikasi();
-        
-        // Jika sedang berada di tab laporan, muat ulang juga laporannya
         if(document.getElementById('page-laporan').classList.contains('active')){
             muatDataLaporan();
         }
     }
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshDataOtomatis();
 });
+window.addEventListener('focus', refreshDataOtomatis);
 
 // ==========================================
 // REGISTRASI SERVICE WORKER UNTUK PWA
