@@ -667,19 +667,16 @@ window.selesaiRental = async function() {
 };
 
 // ==========================================
-// PERBAIKAN FINAL (ANTI MEMORI BASI)
+// PERBAIKAN FINAL (ANTI SALAH SASARAN)
 // ==========================================
 async function prosesCheckout(tv, isAutoAlarm = false) {
     if (tvSedangDiprosesOtomatis[tv.id]) return; 
     tvSedangDiprosesOtomatis[tv.id] = true;
 
     blokirAutoCheckout[tv.id] = true; 
-    
-    if (isAutoAlarm) putarBunyiAlarm();
 
     try {
         // 1. Tarik Data "Paling Fresh" langsung dari Server (realTv)
-        // Ini memastikan pesanan tambahan dari device lain tidak ikut hilang!
         const { data: realTv, error: errReal } = await supabase
             .from('tvs')
             .select('*')
@@ -691,6 +688,27 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
             tv.is_active = false;
             return; 
         }
+
+        // --- 🚨 PERTAHANAN BARU: CEK IDENTITAS SESI (ANTI SALAH SASARAN) 🚨 ---
+        // Jika start_time di HP berbeda dengan start_time di Server, 
+        // artinya HP pakai data basi dan sedang mencoba mematikan sesi pelanggan BARU!
+        if (tv.start_time !== realTv.start_time) {
+            console.log(`Mencegah pembunuhan sesi baru! Data HP basi untuk TV ${tv.id}.`);
+            jalankanAplikasi(); // Sinkronkan UI secara diam-diam
+            return; // Batalkan proses checkout!
+        }
+
+        // --- 🚨 PERTAHANAN ALARM 🚨 ---
+        // Bunyikan alarm HANYA JIKA waktu di server BENAR-BENAR sudah habis.
+        if (isAutoAlarm) {
+            if (realTv.end_time && new Date(realTv.end_time).getTime() > getWaktuAsli().getTime()) {
+                console.log(`Waktu TV ${tv.id} di server ternyata masih ada. Batal auto-checkout.`);
+                jalankanAplikasi();
+                return;
+            }
+            putarBunyiAlarm(); // Aman, waktunya memang sudah habis!
+        }
+        // ----------------------------------------------------------------------
 
         // 2. Kunci Atomic Update (Menangkis Spam Klik / Device Ganda)
         const { data: updatedTv, error: errUpdateTV } = await supabase
@@ -735,7 +753,7 @@ async function prosesCheckout(tv, isAutoAlarm = false) {
             rincianGabungan = rincianMakanan;
         }
 
-        // 4. Catat transaksi menggunakan data REAL dari server, BUKAN dari ingatan basi Laptop
+        // 4. Catat transaksi menggunakan data REAL dari server
         const { error: errInsert } = await supabase.from('transactions').insert([{ 
             tv_id: realTv.id, 
             rental_price: realTv.rental_price, 
